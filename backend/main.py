@@ -8,7 +8,7 @@ import os
 
 app = FastAPI()
 
-app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
+app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
 # Autoriser le front local à faire des requêtes
 app.add_middleware(
@@ -21,7 +21,7 @@ app.add_middleware(
 # GET pour la page principale
 @app.get("/")
 def index():
-    return FileResponse(os.path.join("frontend", "index.html"))
+    return FileResponse("frontend/index.html")
 
 # Pydantic model
 class PasswordRequest(BaseModel):
