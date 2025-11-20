@@ -1,6 +1,6 @@
 from fastapi import APIRouter
-from ..models.password_models import PasswordRequest
-from ..services.password_services import analyse_password
+from backend.app.models.password_models import PasswordRequest
+from backend.app.services.password_services import analyse_password
 
 router = APIRouter()
 

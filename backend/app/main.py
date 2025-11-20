@@ -2,8 +2,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-from .routers import password
+from routers import password
 from fastapi.responses import FileResponse
+from utils.dataset_loader import (
+    create_weak_passwords_csv,
+    create_strong_passwords_csv,
+    create_labeled_dataset,
+    create_processed_dataset
+)
 
 app = FastAPI()
 
@@ -25,3 +31,12 @@ def serve_index():
     return FileResponse(TEMPLATES_DIR / "index.html")
 
 app.include_router(password.router)
+
+def main():
+    create_weak_passwords_csv()
+    create_strong_passwords_csv()
+    create_labeled_dataset()
+    create_processed_dataset()
+
+if __name__ == "__main__":
+    main()
