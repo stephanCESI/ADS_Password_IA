@@ -1,5 +1,5 @@
 body {
-    background-image: url('img/background.jpg');
+    background-image: url('../img/background.jpg');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -15,16 +15,16 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh; /* prend toute la hauteur de l'écran */
+    height: 100vh;
 }
 
-.chat-input {            /* Largeur de la barre */
-    max-width: 600px;           /* Taille max pour grands écrans */
-    padding: 15px 20px;         /* Padding agréable */
-    font-size: 18px;            /* Texte lisible */
-    border-radius: 999px;       /* Bord arrondi type ChatGPT */
+.chat-input {
+    max-width: 600px;
+    padding: 15px 20px;
+    font-size: 18px;
+    border-radius: 999px;
     border: none;
-    background-color: #30243F;  /* Fond légèrement transparent */
+    background-color: #30243F;
     outline: 4px #e0d9f3;
     color: #e0d9f3;
 }
@@ -64,7 +64,7 @@ body {
     border-radius: 50%;
     border: none;
 
-    background-color: #e0d9f3;  /* état "unfocus" */
+    background-color: #e0d9f3;
     color: #30243F;
     font-size: 18px;
     cursor: pointer;
@@ -83,11 +83,11 @@ body {
 }
 
 .input-wrapper input:focus + .circle-btn.visible {
-    background-color: #30243F; /* violet foncé */
-    color: #e0d9f3;            /* violet clair */
+    background-color: #30243F;
+    color: #e0d9f3;
 }
 
 .input-wrapper input:not(:focus) + .circle-btn.visible {
-    background-color: #e0d9f3; /* violet clair */
-    color: #30243F;            /* violet foncé */
+    background-color: #e0d9f3;
+    color: #30243F;
 }
