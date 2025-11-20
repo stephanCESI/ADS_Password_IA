@@ -2,9 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-from routers import password
+from .routers import password
 from fastapi.responses import FileResponse
-from utils.dataset_loader import (
+from .utils.dataset_loader import (
     create_weak_passwords_csv,
     create_strong_passwords_csv,
     create_labeled_dataset,
