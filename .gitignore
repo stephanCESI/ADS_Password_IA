@@ -1,0 +1,33 @@
+# Environnement virtuel
+.venv/
+venv/
+env/
+
+# Fichiers Python inutiles
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Cache FastAPI / Uvicorn
+*.db
+*.sqlite3
+
+# Fichiers générés automatiquement
+*.log
+
+# PyCharm
+.idea/
+*.iml
+
+# Système
+.DS_Store
+Thumbs.db
+
+# Tests
+.coverage
+.cache/
+
+# Node / Front-end (si un jour tu ajoutes un build)
+node_modules/
+dist/
