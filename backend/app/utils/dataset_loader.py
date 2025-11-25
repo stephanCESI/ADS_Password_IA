@@ -124,11 +124,10 @@ def load_rockyou_sample(n=10000):
     return pd.DataFrame({"password": reservoir})
 
 def create_weak_passwords_csv(n=10000, filename="weak_passwords.csv"):
-    df = load_rockyou_sample(n)
-
     allowed = set(string.ascii_letters + string.digits + string.punctuation)
+    df = load_rockyou_sample(n * 2)  # tirer plus pour compenser le filtre
     df = df[df["password"].apply(lambda p: all(c in allowed for c in p))]
-
+    df = df.head(n)  # garder exactement n mots
     df["label"] = 0
     RAW_DIR.mkdir(exist_ok=True)
     df.to_csv(RAW_DIR / filename, index=False, sep=',', quoting=csv.QUOTE_NONNUMERIC)
