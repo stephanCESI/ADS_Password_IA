@@ -31,3 +31,24 @@ Thumbs.db
 # Node / Front-end (si un jour tu ajoutes un build)
 node_modules/
 dist/
+
+# --- DATA SCIENCE & FICHIERS LOURDS (A AJOUTER) ---
+
+# Ignorer les datasets bruts et traités (CSV, TXT)
+datasets/raw/
+datasets/processed/
+datasets/Dictionnaries/processed/
+*.csv
+*.txt
+
+# Ignorer spécifiquement RockYou (car il est énorme)
+rockyou.txt
+
+# Ignorer les modèles IA (Cerveaux .pkl)
+# On garde le dossier 'models' mais pas les fichiers dedans
+backend/app/models/*.pkl
+*.pkl
+
+# Ignorer les graphiques générés (optionnel, si tu ne veux pas polluer)
+*.png
+*.jpg
