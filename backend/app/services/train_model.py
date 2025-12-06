@@ -50,25 +50,44 @@ def load_dictionaries():
 
 
 def calculate_linguistic_features(password, dicts):
-    """Calcule les features linguistiques à la volée"""
+    """Calcule les features linguistiques (Avec détection INVERSÉE)"""
     words_set, names_set, places_set, weak_set = dicts
 
     pwd_str = str(password).lower()
     clean_pwd = re.sub(r'[^a-z]', '', pwd_str)
 
+    # NOUVEAU : On inverse la chaîne nettoyée (ex: "drowssap" -> "password")
+    clean_rev = clean_pwd[::-1]
+
     features = {'is_weak_exact': 0, 'has_word': 0, 'has_name': 0, 'has_place': 0}
 
+    # 1. Check Leak Exact (Endroit et Envers)
+    # Si le mdp est "drowssap" et que "password" est un leak, c'est grave.
     if pwd_str in weak_set:
+        features['is_weak_exact'] = 1
+    elif pwd_str[::-1] in weak_set:  # Check leak inversé
         features['is_weak_exact'] = 1
 
     n = len(clean_pwd)
     if n >= 4:
-        if clean_pwd in words_set: features['has_word'] = 1
-        if clean_pwd in names_set: features['has_name'] = 1
-        if clean_pwd in places_set: features['has_place'] = 1
+        # 2. Check Normal
+        if clean_pwd in words_set or clean_pwd in weak_set:
+            features['has_word'] = 1
+        elif clean_pwd in names_set:
+            features['has_name'] = 1
+        elif clean_pwd in places_set:
+            features['has_place'] = 1
+
+        # 3. NOUVEAU : Check Inversé
+        # Si le mot inversé existe, on considère que c'est un mot du dico
+        if clean_rev in words_set or clean_rev in weak_set:
+            features['has_word'] = 1
+        elif clean_rev in names_set:
+            features['has_name'] = 1
+        elif clean_rev in places_set:
+            features['has_place'] = 1
 
     return pd.Series(features)
-
 
 def train():
     print("--- 🚀 DÉBUT DE L'ENTRAÎNEMENT MULTI-MODÈLES ---")

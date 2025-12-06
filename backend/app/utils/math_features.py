@@ -81,3 +81,38 @@ def compute_entropy(password: str) -> float:
     entropy_bits = len(password) * math.log2(pool_size)
 
     return min(entropy_bits / MAX_ENTROPY, 1.0)
+
+def calculate_bruteforce_time(password):
+    """
+    Estime le temps de craquage par force brute pure (hors dictionnaire).
+    Hypothèse : Hacker avec un bon GPU (RTX 3090/4090) -> 100 Milliards hash/sec (MD5)
+    """
+    # 1. Calcul du Pool (N)
+    pool_size = 0
+    if any(c.islower() for c in password): pool_size += 26
+    if any(c.isupper() for c in password): pool_size += 26
+    if any(c.isdigit() for c in password): pool_size += 10
+    if any(c in string.punctuation for c in password): pool_size += 33
+
+    if pool_size == 0: return "Instant"
+
+    # 2. Calcul des combinaisons (N^L)
+    combinations = pool_size ** len(password)
+
+    # 3. Vitesse (Hashrate)
+    # 100 GigaHashes/seconde (très rapide, scénario pessimiste pour l'utilisateur)
+    hashrate = 100_000_000_000
+
+    # 4. Temps en secondes (Moyenne = 50% de l'espace)
+    seconds = (combinations / 2) / hashrate
+
+    # 5. Conversion lisible
+    if seconds < 1: return "Instantané"
+    if seconds < 60: return f"{int(seconds)} secondes"
+    if seconds < 3600: return f"{int(seconds / 60)} minutes"
+    if seconds < 86400: return f"{int(seconds / 3600)} heures"
+    if seconds < 31536000: return f"{int(seconds / 86400)} jours"
+
+    years = int(seconds / 31536000)
+    if years > 1000000: return "Des millions d'années"
+    return f"{years} ans"
