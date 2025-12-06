@@ -18,6 +18,75 @@
         <button class="nav-btn" data-tab="duel-model">Duel de modèles</button>
     </nav>
 
+    <!-- 1. BOUTON BURGER (Haut Gauche) -->
+    <button id="burgerBtn" class="burger-btn">
+        <i class="fa-solid fa-bars"></i>
+    </button>
+
+    <!-- 2. MENU LATÉRAL (Caché à gauche) -->
+    <div id="sideMenu" class="side-menu">
+        <div class="menu-header">
+            <h3 class="menu-title">DOCUMENTATION</h3>
+            <button id="closeMenuBtn" class="close-btn">&times;</button>
+        </div>
+        <ul class="menu-list">
+            <li data-doc="projet"><i class="fa-solid fa-bullseye"></i> Le Projet & Objectifs</li>
+            <li data-doc="algo"><i class="fa-solid fa-brain"></i> L'Algorithme Random Forest</li>
+            <li data-doc="dataset"><i class="fa-solid fa-database"></i> Le Dataset RockYou</li>
+            <li data-doc="biblio"><i class="fa-solid fa-book"></i> Bibliographie</li>
+        </ul>
+        <div class="menu-footer">
+            <small>ADS - A4 2025</small>
+        </div>
+    </div>
+
+    <!-- 3. LECTEUR DE DOCUMENTATION (Overlay Plein Écran) -->
+    <div id="docOverlay" class="doc-overlay hidden">
+        <div class="doc-container">
+            <button id="closeDocBtn" class="back-btn"><i class="fa-solid fa-arrow-left"></i> Retour</button>
+
+            <!-- Contenu : Projet -->
+            <div id="content-projet" class="doc-content hidden">
+                <h1>🎯 Le Projet</h1>
+                <p>Ce projet d'Analyse de Données (ADS) vise à démontrer que l'entropie mathématique seule ne suffit pas à garantir la sécurité d'un mot de passe.</p>
+                <h3>Objectifs</h3>
+                <ul>
+                    <li>Créer une IA capable de détecter les patterns humains.</li>
+                    <li>Prouver que "Thomas123" est plus faible que "xf9#kL".</li>
+                    <li>Comparer les générateurs classiques vs IA.</li>
+                </ul>
+            </div>
+
+            <!-- Contenu : Algo -->
+            <div id="content-algo" class="doc-content hidden">
+                <h1>🧠 Random Forest</h1>
+                <p>Nous utilisons un algorithme de "Forêt Aléatoire" composé de 100 arbres de décision.</p>
+                <p>Contrairement au Deep Learning, ce modèle permet d'interpréter les résultats (Feature Importance) et excelle sur les données tabulaires.</p>
+            </div>
+
+            <!-- Contenu : Dataset -->
+            <div id="content-dataset" class="doc-content hidden">
+                <h1>💾 Les Données</h1>
+                <p>Le modèle a été entraîné sur un dataset équilibré de 100 000 entrées :</p>
+                <ul>
+                    <li><strong>50% Faibles :</strong> Issus du leak RockYou et des dictionnaires.</li>
+                    <li><strong>50% Forts :</strong> Générés aléatoirement avec Python secrets.</li>
+                </ul>
+            </div>
+
+            <!-- Contenu : Biblio -->
+            <div id="content-biblio" class="doc-content hidden">
+                <h1>📚 Bibliographie</h1>
+                <p>Ressources utilisées pour ce projet :</p>
+                <ul>
+                    <li><a href="#">SecLists (Daniel Miessler)</a> - Source des leaks.</li>
+                    <li><a href="#">Scikit-Learn Documentation</a> - Implémentation ML.</li>
+                    <li><a href="#">NCSC Password Guidance</a> - Recommandations officielles.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
     <!-- NOUVEAU SÉLECTEUR (Technique Overlay) -->
     <div class="model-selector-wrapper">
         <!-- 1. Ce qu'on voit (Le Design) -->

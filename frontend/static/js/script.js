@@ -112,4 +112,62 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+
+    const burgerBtn = document.getElementById('burgerBtn');
+    const sideMenu = document.getElementById('sideMenu');
+    const closeMenuBtn = document.getElementById('closeMenuBtn');
+
+    // Ouvrir le menu
+    burgerBtn.addEventListener('click', () => {
+        sideMenu.classList.add('open');
+    });
+
+    // Fermer le menu
+    closeMenuBtn.addEventListener('click', () => {
+        sideMenu.classList.remove('open');
+    });
+
+    // Fermer si on clique en dehors du menu
+    document.addEventListener('click', (e) => {
+        if (sideMenu.classList.contains('open') &&
+            !sideMenu.contains(e.target) &&
+            !burgerBtn.contains(e.target)) {
+            sideMenu.classList.remove('open');
+        }
+    });
+
+    // ============================================================
+    // GESTION DE LA DOCUMENTATION (LECTEUR)
+    // ============================================================
+    const menuItems = document.querySelectorAll('.menu-list li');
+    const docOverlay = document.getElementById('docOverlay');
+    const closeDocBtn = document.getElementById('closeDocBtn');
+    const docContents = document.querySelectorAll('.doc-content');
+
+    // Clic sur un article du menu
+    menuItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const docId = item.dataset.doc; // ex: "projet", "algo"
+
+            // 1. Cacher tous les articles
+            docContents.forEach(content => content.classList.add('hidden'));
+
+            // 2. Afficher celui demandé
+            const targetContent = document.getElementById('content-' + docId);
+            if (targetContent) targetContent.classList.remove('hidden');
+
+            // 3. Ouvrir l'overlay
+            docOverlay.classList.remove('hidden');
+
+            // 4. Fermer le menu latéral pour faire propre
+            sideMenu.classList.remove('open');
+        });
+    });
+
+    // Bouton Retour de la doc
+    closeDocBtn.addEventListener('click', () => {
+        docOverlay.classList.add('hidden');
+    });
+
 });

@@ -150,3 +150,172 @@ body {
     padding: 10px;
     font-size: 1rem;
 }
+
+/* ... (GARDE TOUT TON CSS PRÉCÉDENT ICI) ... */
+
+/* --- BOUTON BURGER (Haut Gauche) --- */
+.burger-btn {
+    position: fixed;
+    top: 25px;
+    left: 30px; /* À gauche comme demandé */
+    z-index: 1200;
+
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+
+    background: rgba(48, 36, 63, 0.8);
+    color: #e0d9f3;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.burger-btn:hover {
+    background: #e0d9f3;
+    color: #30243F;
+    transform: scale(1.1);
+}
+
+/* --- MENU LATÉRAL (SIDENAV) --- */
+.side-menu {
+    position: fixed;
+    top: 0;
+    left: -350px; /* Caché hors écran à gauche */
+    width: 320px;
+    height: 100vh;
+
+    background: #30243F; /* La couleur demandée */
+    box-shadow: 5px 0 30px rgba(0,0,0,0.5);
+    z-index: 1300;
+
+    padding: 40px 30px;
+    display: flex;
+    flex-direction: column;
+
+    /* Animation de glissement */
+    transition: left 0.4s cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+.side-menu.open {
+    left: 0; /* On le ramène visible */
+}
+
+.menu-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 40px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 15px;
+}
+
+.menu-title {
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: bold;
+    letter-spacing: 2px;
+    margin: 0;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 2rem;
+    cursor: pointer;
+    line-height: 1;
+}
+.close-btn:hover { color: #fff; }
+
+.menu-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.menu-list li {
+    padding: 15px 0;
+    font-size: 1.1rem;
+    color: #e0d9f3;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.menu-list li:hover {
+    color: #fff;
+    transform: translateX(10px);
+    border-bottom-color: rgba(255,255,255,0.3);
+}
+
+.menu-footer {
+    margin-top: auto;
+    color: #777;
+    font-size: 0.8rem;
+    text-align: center;
+}
+
+/* --- LECTEUR DE DOCUMENTATION (OVERLAY) --- */
+.doc-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(26, 26, 46, 0.98); /* Fond presque opaque */
+    z-index: 1400; /* Au-dessus du menu latéral */
+    overflow-y: auto; /* Permet de scroller si le texte est long */
+    padding: 60px 20px;
+
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.doc-overlay:not(.hidden) {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.doc-container {
+    max-width: 800px;
+    margin: 0 auto;
+    color: #e0d9f3;
+}
+
+.back-btn {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #fff;
+    padding: 10px 25px;
+    border-radius: 30px;
+    cursor: pointer;
+    margin-bottom: 40px;
+    transition: all 0.3s;
+}
+.back-btn:hover { background: #fff; color: #30243F; }
+
+.doc-content h1 {
+    font-size: 2.5rem;
+    color: #fff;
+    margin-bottom: 30px;
+    border-bottom: 2px solid #30243F;
+    padding-bottom: 15px;
+}
+
+.doc-content h3 { color: #aaa; margin-top: 30px; }
+.doc-content p, .doc-content li {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: #ccc;
+}
+.doc-content a { color: #4facfe; text-decoration: none; }
+.doc-content a:hover { text-decoration: underline; }
