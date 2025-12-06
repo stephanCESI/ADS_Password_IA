@@ -1,93 +1,152 @@
+/* --- LE CONTENEUR PRINCIPAL DE L'ONGLET HOME --- */
+.home-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* --- L'INPUT WRAPPER (Barre de recherche) --- */
+.input-wrapper {
+    position: relative;
+    width: 50%;
+    max-width: 600px;
+    margin-top: 40vh;
+    transition: margin-top 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
+    z-index: 100;
+}
+
+/* --- LA CLASSE QU'ON AJOUTERA EN JS --- */
+.input-wrapper.moved-up {
+    margin-top: 120px;
+}
+
+/* --- BASE --- */
 body {
     background-image: url('../img/background.jpg');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-
+    background-attachment: fixed;
     color: #e0d9f3;
     min-height: 100vh;
     margin: 0;
     padding: 0;
     font-family: Arial, sans-serif;
+    overflow-x: hidden;
 }
 
-.centered-input-container {
+/* Navbar Fixe */
+.custom-navbar {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: rgba(48, 36, 63, 0.8);
+    backdrop-filter: blur(10px);
+    padding: 10px 20px;
+    border-radius: 50px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
+    gap: 10px;
 }
 
-.chat-input {
-    max-width: 600px;
-    padding: 15px 20px;
-    font-size: 18px;
-    border-radius: 999px;
+.nav-btn {
+    background: transparent;
     border: none;
-    background-color: #30243F;
-    outline: 4px #e0d9f3;
-    color: #e0d9f3;
+    color: #aaa;
+    padding: 8px 20px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
 }
 
-.chat-input::placeholder {
-    color: #e0d9f3;
-    opacity: 1;
+.nav-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+.nav-btn.active { background: #e0d9f3; color: #30243F; box-shadow: 0 0 10px rgba(224, 217, 243, 0.3); }
+
+/* Styles Input et Bouton */
+.chat-input {
+    max-width: 600px; padding: 15px 20px; font-size: 18px;
+    border-radius: 999px; border: none; background-color: #30243F;
+    outline: 4px #e0d9f3; color: #e0d9f3; width: 100%;
 }
-
-
+.chat-input::placeholder { color: #e0d9f3; opacity: 1; }
 .chat-input:focus {
-    outline: none;
-    background-color: #e0d9f3;
-    box-shadow: 0 0 0 4px rgba(48, 36, 63, 0.5);
-    color: #30243F;
+    outline: none; background-color: #e0d9f3;
+    box-shadow: 0 0 0 4px rgba(48, 36, 63, 0.5); color: #30243F;
 }
-
-.chat-input:focus::placeholder {
-    color: #30243F;
-    opacity: 1;
-}
-
-.input-wrapper {
-    position: relative;
-    width: 50%;
-    max-width: 600px;
-}
+.chat-input:focus::placeholder { color: #30243F; opacity: 1; }
 
 .circle-btn {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    border: none;
-
-    background-color: #e0d9f3;
-    color: #30243F;
-    font-size: 18px;
-    cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    opacity: 0;
-    pointer-events: none;
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    width: 42px; height: 42px; border-radius: 50%; border: none;
+    background-color: #e0d9f3; color: #30243F;
+    font-size: 18px; cursor: pointer;
+    display: flex; justify-content: center; align-items: center;
+    opacity: 0; pointer-events: none;
     transition: opacity 0.2s ease, background-color 0.2s ease, color 0.2s ease;
 }
+.circle-btn.visible { opacity: 1; pointer-events: auto; }
+.input-wrapper input:focus + .circle-btn.visible { background-color: #30243F; color: #e0d9f3; }
+.input-wrapper input:not(:focus) + .circle-btn.visible { background-color: #e0d9f3; color: #30243F; }
 
-.circle-btn.visible {
-    opacity: 1;
-    pointer-events: auto;
+/* Utilitaires Onglets */
+.tab-content { width: 100%; height: 100%; }
+.hidden { display: none !important; }
+.placeholder-title { font-size: 3rem; font-weight: bold; color: rgba(255, 255, 255, 0.1); text-transform: uppercase; letter-spacing: 5px; }
+
+
+/* --- SÉLECTEUR DE MODÈLE (DESIGN OVERLAY) --- */
+.model-selector-wrapper {
+    position: fixed;
+    top: 25px;
+    right: 30px;
+    z-index: 1100;
+
+    /* Design de la pilule */
+    background: rgba(48, 36, 63, 0.6);
+    backdrop-filter: blur(5px);
+    padding: 8px 20px;
+    border-radius: 50px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+
+    cursor: pointer;
+    overflow: hidden; /* Pour contenir le select */
 }
 
-.input-wrapper input:focus + .circle-btn.visible {
-    background-color: #30243F;
-    color: #e0d9f3;
+.model-selector-wrapper:hover {
+    background: rgba(48, 36, 63, 0.9);
+    border-color: #e0d9f3;
+    box-shadow: 0 0 15px rgba(48, 36, 63, 0.5);
 }
 
-.input-wrapper input:not(:focus) + .circle-btn.visible {
-    background-color: #e0d9f3;
-    color: #30243F;
+.model-label {
+    color: #aaa;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+/* Le Select Invisible qui couvre tout */
+.full-click-select {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+
+    opacity: 0; /* INVISIBLE */
+    cursor: pointer;
+
+    appearance: none;
+    -webkit-appearance: none;
+    border: none;
+}
+
+/* Style des options du menu (visible une fois ouvert) */
+.full-click-select option {
+    background-color: #1a1a2e;
+    color: #fff;
+    padding: 10px;
+    font-size: 1rem;
 }
