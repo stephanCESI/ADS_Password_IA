@@ -1,52 +1,94 @@
 import pandas as pd
-import random
 import re
+from pathlib import Path
 
-path = "../../../datasets/Dictionnaries/raw/"
+# --- GESTION DES CHEMINS ---
+BASE_DIR = Path(__file__).resolve().parents[3]
+PATH_RAW = BASE_DIR / "datasets" / "Dictionnaries" / "raw"
+PATH_PROCESSED = BASE_DIR / "datasets" / "Dictionnaries" / "processed"
+PATH_PROCESSED.mkdir(parents=True, exist_ok=True)
 
 def clean_token(token):
+    """
+    Nettoie un token : minuscules, lettres uniquement.
+    Renvoie vide si le token fait moins de 3 lettres (évite le bruit comme 'le', 'at', 'in')
+    """
     if not isinstance(token, str):
         return ""
-    token = token.lower()
-    token = re.sub(r"[^a-z]", "", token)
-    return token
+    # On ne garde que les lettres de a à z
+    token = re.sub(r"[^a-zA-Z]", "", token).lower()
+    return token if len(token) > 2 else ""
 
-with open(path+"english-words.35", "r", encoding="latin-1", errors="ignore") as f:
-    words = [w.strip() for w in f if w.strip()]
-words_20k = random.sample(words, 22000)
-words_20k = [clean_token(w) for w in words_20k if clean_token(w)]
+print("--- GÉNÉRATION DU CORPUS LINGUISTIQUE (FULL) ---")
 
-female = pd.read_csv(path+"dist.female.first.txt", sep=r"\s+", header=None, encoding="latin-1")[0]
-male   = pd.read_csv(path+"dist.male.first.txt",   sep=r"\s+", header=None, encoding="latin-1")[0]
-last = pd.read_csv(path+"dist.all.last.txt", sep=r"\s+", header=None, encoding="latin-1")[0]
-all_names = pd.concat([female, male, last], ignore_index=True).drop_duplicates()
-all_names = [clean_token(n) for n in all_names if isinstance(n, str) and clean_token(n)]
-names_5k = random.sample(all_names, 5500)
+# 1. Chargement des Mots Anglais
+print("1. Chargement des mots anglais...")
+with open(PATH_RAW / "english-words.35", "r", encoding="latin-1", errors="ignore") as f:
+    # On nettoie à la volée
+    words = [clean_token(w) for w in f]
+# On retire les vides et les doublons immédiatement via set()
+words_list = list(set(filter(None, words)))
+print(f"   -> {len(words_list)} mots conservés.")
 
+
+# 2. Chargement des Noms et Prénoms
+print("2. Chargement des prénoms/noms...")
+# Lecture rapide sans header
+female = pd.read_csv(PATH_RAW / "dist.female.first.txt", sep=r"\s+", header=None, encoding="latin-1")[0]
+male   = pd.read_csv(PATH_RAW / "dist.male.first.txt",   sep=r"\s+", header=None, encoding="latin-1")[0]
+last   = pd.read_csv(PATH_RAW / "dist.all.last.txt",     sep=r"\s+", header=None, encoding="latin-1")[0]
+
+all_names_raw = pd.concat([female, male, last], ignore_index=True)
+# Nettoyage
+names_clean = [clean_token(n) for n in all_names_raw]
+# Pas de random ! On garde tout.
+names_list = list(set(filter(None, names_clean)))
+print(f"   -> {len(names_list)} noms conservés.")
+
+
+# 3. Chargement des Villes et Pays
+print("3. Chargement des lieux...")
 df_cities = pd.read_csv(
-    path + "geonames-all-cities-with-a-population-1000.csv",
+    PATH_RAW / "geonames-all-cities-with-a-population-1000.csv",
     sep=";",
     encoding="utf-8",
     on_bad_lines="skip"
 )
-cities = [clean_token(n) for n in df_cities["Name"].dropna() if clean_token(n)]
+# On convertit en string pour être sûr
+cities = [clean_token(str(n)) for n in df_cities["Name"]]
 
-with open(path+"countries.txt", "r", encoding="utf-8") as f:
-    countries = [clean_token(c) for c in f if clean_token(c)]
+with open(PATH_RAW / "countries.txt", "r", encoding="utf-8") as f:
+    countries = [clean_token(c) for c in f]
 
-places = list(dict.fromkeys(cities + countries))
-places_1k = random.sample(places, 1200)
+# Fusion et dédoublonnage
+places_list = list(set(filter(None, cities + countries)))
+print(f"   -> {len(places_list)} lieux conservés.")
 
-with open(path+"1000-most-common-passwords.txt", "r") as f:
+
+# 4. Chargement des mots de passe faibles (RockYou/Common)
+print("4. Chargement des mots de passe faibles...")
+with open(PATH_RAW / "1000-most-common-passwords.txt", "r") as f:
+    # Ici on garde tel quel (juste strip/lower), on veut le mdp exact
     weak_pwds = [p.strip().lower() for p in f if p.strip()]
+print(f"   -> {len(weak_pwds)} weak passwords.")
+
+
+# --- CRÉATION DU DATAFRAME FINAL ---
+print("5. Compilation et Sauvegarde...")
 
 corpus = pd.DataFrame({
-    "token": words_20k + names_5k + places_1k + weak_pwds,
-    "category": ["word"]*len(words_20k) + ["name"]*len(names_5k) + ["place"]*len(places_1k) + ["weak_pwd"]*len(weak_pwds)
+    "token": words_list + names_list + places_list + weak_pwds,
+    "category": ["word"]*len(words_list) + ["name"]*len(names_list) + ["place"]*len(places_list) + ["weak_pwd"]*len(weak_pwds)
 })
 
-corpus = corpus.drop_duplicates(subset=["token", "category"]).reset_index(drop=True)
+# Dernier dédoublonnage au cas où un token soit dans plusieurs catégories (ex: 'paris' est un nom et une ville)
+# On peut garder les doublons si on veut savoir qu'il appartient aux deux, mais pour simplifier on drop
+# Si on veut garder la priorité : on peut trier par catégorie avant, mais ici drop_duplicates garde le premier trouvé
+corpus = corpus.drop_duplicates(subset=["token", "category"])
 
-corpus.to_csv("../../../datasets/Dictionnaries/processed/linguistic_dictionary.csv", index=False)
-print(f"Corpus final : {len(corpus)} lignes")
-print(len(words_20k), len(names_5k), len(places_1k), len(weak_pwds))
+outfile = PATH_PROCESSED / "linguistic_dictionary.csv"
+corpus.to_csv(outfile, index=False)
+
+print(f"--- SUCCÈS ---")
+print(f"Fichier généré : {outfile}")
+print(f"Total entrées  : {len(corpus)}")

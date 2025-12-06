@@ -2,9 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-from routers import password
 from fastapi.responses import FileResponse
-from utils.dataset_loader import (
+from backend.app.routers import password
+from backend.app.utils.dataset_loader import (
     create_weak_passwords_csv,
     create_strong_passwords_csv,
     create_labeled_dataset,
@@ -33,10 +33,14 @@ def serve_index():
 app.include_router(password.router)
 
 def main():
-    create_weak_passwords_csv()
-    create_strong_passwords_csv()
-    create_labeled_dataset()
-    create_processed_dataset()
+    if not (BASE_DIR / "datasets" / "processed" / "passwords_processed.csv").exists():
+        print("Génération du dataset en cours...")
+        create_weak_passwords_csv()
+        create_strong_passwords_csv()
+        create_labeled_dataset()
+        create_processed_dataset()
+    else:
+        print("Dataset déjà présent. Démarrage rapide.")
 
 if __name__ == "__main__":
     main()
