@@ -52,3 +52,5 @@ backend/app/models/*.pkl
 # Ignorer les graphiques générés (optionnel, si tu ne veux pas polluer)
 *.png
 *.jpg
+
+*.35
