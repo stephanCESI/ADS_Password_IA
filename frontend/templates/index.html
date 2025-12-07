@@ -87,20 +87,28 @@
         </div>
     </div>
 
-    <!-- NOUVEAU SÉLECTEUR (Technique Overlay) -->
+    <!-- SÉLECTEUR DE MODÈLE MIS À JOUR -->
     <div class="model-selector-wrapper">
-        <!-- 1. Ce qu'on voit (Le Design) -->
+        <!-- Visuel -->
         <div class="selector-visual">
             <i class="fa-solid fa-brain" style="color: #aaa; margin-right: 8px;"></i>
-            <span class="model-label">Cerveau IA :</span>
-            <span id="selectedModelText" style="color: #e0d9f3; font-weight: bold; margin-left: 5px;">Random Forest</span>
+            <span class="model-label">Cerveau :</span>
+            <span id="selectedModelText" style="color: #e0d9f3; font-weight: bold; margin-left: 5px;">CNN (Deep Learning)</span>
+            <i class="fa-solid fa-chevron-down ms-2" style="font-size: 0.8em; opacity: 0.7;"></i>
         </div>
 
-        <!-- 2. Ce qu'on clique (Le Select Invisible qui prend toute la place) -->
+        <!-- Select avec OPTGROUPS -->
         <select id="modelSelect" class="full-click-select">
-            <option value="rf" selected>Random Forest</option>
-            <option value="xgb">XGBoost</option>
-            <option value="log">Régression Logistique</option>
+            <optgroup label="Deep Learning">
+                <option value="cnn">CNN</option>
+                <option value="lstm">LSTM</option>
+                <option value="dnn">DNN</option>
+            </optgroup>
+            <optgroup label="Machine Learning">
+                <option value="rf" selected>Random Forest</option>
+                <option value="xgb">XGBoost</option>
+                <option value="log">Régression Logistique</option>
+            </optgroup>
         </select>
     </div>
 

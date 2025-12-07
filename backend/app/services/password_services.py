@@ -4,55 +4,90 @@ import re
 from pathlib import Path
 import numpy as np
 import traceback
+import pickle
 
-# --- IMPORT OBLIGATOIRE POUR XGBOOST ---
+# --- GESTION DES DÉPENDANCES LOURDES ---
+# On gère le cas où TensorFlow ou XGBoost ne seraient pas installés
+try:
+    import tensorflow as tf
+    from tensorflow.keras.preprocessing.sequence import pad_sequences
+
+    HAS_TF = True
+except ImportError:
+    HAS_TF = False
+    print("⚠️ TensorFlow non trouvé. Les modèles Deep Learning (CNN, LSTM) seront indisponibles.")
+
 try:
     import xgboost
 except ImportError:
-    pass  # On gère l'erreur plus bas si besoin
+    pass
 
-# --- IMPORT CENTRALISÉ DES CALCULS ---
+# --- IMPORT CALCULS ---
 from backend.app.utils.math_features import (
-    compute_length_norm,
-    compute_diversity,
-    compute_entropy,
-    calculate_bruteforce_time
+    compute_length_norm, compute_diversity, compute_entropy, calculate_bruteforce_time
 )
 
-# --- CONFIGURATION DES CHEMINS ---
+# --- CONFIGURATION ---
 BASE_DIR = Path(__file__).resolve().parents[3]
 MODEL_DIR = BASE_DIR / "backend" / "app" / "models"
+DL_DATA_DIR = BASE_DIR / "datasets" / "deep_learning_data"
 DICT_DIR = BASE_DIR / "datasets" / "Dictionnaries" / "processed"
 
 # --- VARIABLES GLOBALES ---
-loaded_models = {}
+loaded_ml_models = {}  # Pour RF, XGB, LogReg
+loaded_dl_models = {}  # Pour CNN, LSTM, DNN
+tokenizer = None  # Pour convertir le texte en chiffres (DL)
+dl_config = None  # Pour connaître la taille max (32 chars)
 dictionaries = None
 
 
 def load_resources():
-    """Charge TOUS les modèles disponibles et le dictionnaire"""
-    global loaded_models, dictionaries
+    global loaded_ml_models, loaded_dl_models, tokenizer, dl_config, dictionaries
 
-    # 1. Chargement des Modèles
-    model_files = {
+    # 1. Chargement des Modèles Machine Learning (.pkl)
+    ml_files = {
         "rf": "random_forest.pkl",
         "xgb": "xgboost.pkl",
         "log": "logistic_regression.pkl"
     }
-
-    print("--- Chargement des Cerveaux IA ---")
-    for key, filename in model_files.items():
-        path = MODEL_DIR / filename
+    print("--- Chargement ML ---")
+    for key, fname in ml_files.items():
+        path = MODEL_DIR / fname
         if path.exists():
             try:
-                loaded_models[key] = joblib.load(path)
-                print(f"✅ {key.upper()} chargé.")
-            except Exception as e:
-                print(f"❌ Erreur chargement {filename}: {e}")
-        else:
-            print(f"⚠️ Modèle introuvable : {filename}")
+                loaded_ml_models[key] = joblib.load(path)
+                print(f"✅ ML: {key.upper()} chargé.")
+            except:
+                print(f"❌ Erreur chargement {fname}")
 
-    # 2. Chargement du Dictionnaire
+    # 2. Chargement des Modèles Deep Learning (.keras)
+    if HAS_TF:
+        print("--- Chargement DL ---")
+        dl_files = {
+            "cnn": "cnn_scanner.keras",
+            "lstm": "lstm_reader.keras",
+            "dnn": "dnn_simple.keras"
+        }
+        for key, fname in dl_files.items():
+            path = MODEL_DIR / fname
+            if path.exists():
+                try:
+                    loaded_dl_models[key] = tf.keras.models.load_model(path)
+                    print(f"✅ DL: {key.upper()} chargé.")
+                except:
+                    print(f"❌ Erreur chargement {fname}")
+
+        # Chargement du Tokenizer (Indispensable pour le DL)
+        try:
+            with open(DL_DATA_DIR / "tokenizer.pickle", "rb") as f:
+                tokenizer = pickle.load(f)
+            with open(DL_DATA_DIR / "config.pickle", "rb") as f:
+                dl_config = pickle.load(f)
+            print(f"✅ Tokenizer chargé (Max Len: {dl_config['max_len']})")
+        except:
+            print("⚠️ Tokenizer introuvable. Le DL ne pourra pas traiter le texte.")
+
+    # 3. Chargement du Dictionnaire Linguistique
     try:
         corpus = pd.read_csv(DICT_DIR / "linguistic_dictionary.csv")
         corpus['token'] = corpus['token'].astype(str).str.lower().str.strip()
@@ -62,20 +97,21 @@ def load_resources():
             'places': set(corpus[corpus['category'] == 'place']['token']),
             'weak': set(corpus[corpus['category'] == 'weak_pwd']['token'])
         }
-        print(f"✅ Dictionnaires chargés : {len(corpus)} entrées.")
-    except Exception as e:
-        print(f"⚠️ Erreur chargement dictionnaire : {e}")
+        print(f"✅ Dictionnaire chargé : {len(corpus)} entrées.")
+    except:
+        print("⚠️ Dictionnaire introuvable.")
         dictionaries = None
 
 
-# Chargement au démarrage
+# On lance tout au démarrage
 load_resources()
 
+
+# --- FONCTIONS UTILITAIRES ---
 
 def get_linguistic_features(password):
     features = {'is_weak_exact': 0, 'has_word': 0, 'has_name': 0, 'has_place': 0}
     if dictionaries is None: return features
-
     pwd_lower = password.lower()
     clean_pwd = re.sub(r'[^a-z]', '', pwd_lower)
     clean_rev = clean_pwd[::-1]
@@ -90,6 +126,7 @@ def get_linguistic_features(password):
             features['has_name'] = 1
         elif clean_pwd in dictionaries['places']:
             features['has_place'] = 1
+
         if clean_rev in dictionaries['words'] or clean_rev in dictionaries['weak']:
             features['has_word'] = 1
         elif clean_rev in dictionaries['names']:
@@ -103,67 +140,83 @@ def check_patterns(password):
     fb = []
     if re.search(r'(19|20)\d{2}', password): fb.append("Contient une année")
     if re.search(r'(.)\1{2,}', password): fb.append("Caractères répétés")
-    if re.search(r'123|234|345|456|567|678|789|321|432|543|654|765|876|987', password):
-        fb.append("Suite logique")
+    if re.search(r'123|234|345|321|432|543', password): fb.append("Suite logique")
     return fb
 
 
+def prepare_dl_input(password):
+    """Prépare le mot de passe pour le CNN/LSTM (Tokenization + Padding)"""
+    if not tokenizer or not dl_config: return None
+    # Transformation en suite de chiffres
+    seq = tokenizer.texts_to_sequences([str(password)])
+    # Padding pour atteindre 32 caractères (avec des 0)
+    padded = pad_sequences(seq, maxlen=dl_config['max_len'], padding='post', truncating='post')
+    return padded
+
+
+# --- FONCTION PRINCIPALE (ROUTAGE) ---
+
 def analyse_password(password: str, model_type: str = "rf"):
+    # 1. Calculs classiques (On les fait TOUJOURS pour le feedback et l'entropie)
     entropy = compute_entropy(password)
     length_norm = compute_length_norm(password)
     diversity = compute_diversity(password)
     linguistic = get_linguistic_features(password)
     crack_time = calculate_bruteforce_time(password)
 
-    features_df = pd.DataFrame([{
-        'length_norm': length_norm, 'diversity': diversity, 'entropy': entropy,
-        'is_weak_exact': linguistic['is_weak_exact'], 'has_word': linguistic['has_word'],
-        'has_name': linguistic['has_name'], 'has_place': linguistic['has_place']
-    }])
+    # 2. Prédiction IA
+    ai_prob = 0.0
 
-    # Ordre forcé pour XGBoost
-    features_df = features_df[
-        ['length_norm', 'diversity', 'entropy', 'is_weak_exact', 'has_word', 'has_name', 'has_place']]
+    # CAS A : Modèle Deep Learning (CNN, LSTM...)
+    if model_type in ['cnn', 'lstm', 'dnn']:
+        if HAS_TF and model_type in loaded_dl_models:
+            try:
+                input_data = prepare_dl_input(password)
+                if input_data is not None:
+                    # Prédiction DL (retourne [[0.998]])
+                    ai_prob = float(loaded_dl_models[model_type].predict(input_data, verbose=0)[0][0])
+            except Exception as e:
+                print(f"❌ Erreur DL ({model_type}): {e}")
+        else:
+            print(f"⚠️ Modèle DL '{model_type}' non disponible.")
 
-    selected_model = loaded_models.get(model_type)
-    if not selected_model and loaded_models:
-        selected_model = list(loaded_models.values())[0]
-
-    score_final = 0
-    is_strong = False
-    ai_prob = 0.0  # On l'initialise en float standard
-
-    if selected_model:
-        try:
-            # --- CORRECTION CRITIQUE ICI ---
-            # On récupère la valeur brute (qui est peut-être un numpy.float32)
-            raw_prob = selected_model.predict_proba(features_df)[0][1]
-
-            # On la convertit EXPLICITEMENT en float Python natif
-            ai_prob = float(raw_prob)
-
-            is_strong = bool(ai_prob > 0.5)
-            score_final = int(ai_prob * 100)
-        except Exception as e:
-            print(f"❌ ERREUR PRÉDICTION ({model_type}) : {e}")
-            traceback.print_exc()
-            score_final = int((entropy * 0.5 + diversity * 0.3 + length_norm * 0.2) * 100)
+    # CAS B : Modèle Machine Learning Classique (RF, XGB...)
     else:
-        score_final = int((entropy * 0.5 + diversity * 0.3 + length_norm * 0.2) * 100)
+        # On prépare le DataFrame de features
+        features_df = pd.DataFrame([{
+            'length_norm': length_norm, 'diversity': diversity, 'entropy': entropy,
+            'is_weak_exact': linguistic['is_weak_exact'], 'has_word': linguistic['has_word'],
+            'has_name': linguistic['has_name'], 'has_place': linguistic['has_place']}
+        ])
+        # Ordre forcé
+        features_df = features_df[
+            ['length_norm', 'diversity', 'entropy', 'is_weak_exact', 'has_word', 'has_name', 'has_place']]
 
+        # On récupère le modèle ML
+        model = loaded_ml_models.get(model_type, loaded_ml_models.get('rf'))
+        if model:
+            try:
+                ai_prob = float(model.predict_proba(features_df)[0][1])
+            except:
+                pass
+
+    # 3. Résultat Final
+    score_final = int(ai_prob * 100)
+    is_strong = score_final > 50
+
+    # 4. Feedback (Indépendant du modèle, basé sur les règles)
     feedback = []
     if len(password) < 8: feedback.append("Trop court")
     if diversity < 0.5: feedback.append("Manque de variété")
     if linguistic['is_weak_exact']:
-        feedback.append("Ce mot de passe est connu des pirates (Leak RockYou)")
+        feedback.append("Ce mot de passe est connu des pirates (Leak)")
     else:
         if linguistic['has_name']: feedback.append("Contient un prénom/nom connu")
         if linguistic['has_word']: feedback.append("Contient un mot du dictionnaire")
-        if linguistic['has_place']: feedback.append("Contient un nom de ville ou pays")
-
+        if linguistic['has_place']: feedback.append("Contient un nom de lieu")
     feedback.extend(check_patterns(password))
-    if score_final > 80 and not feedback:
-        feedback.append("Mot de passe excellent !")
+
+    if score_final > 80 and not feedback: feedback.append("Mot de passe excellent !")
 
     return {
         "password": password,
@@ -172,9 +225,8 @@ def analyse_password(password: str, model_type: str = "rf"):
         "model_used": model_type,
         "details": {
             "entropy_bits": int(entropy * 100),
-            "length": len(password),
-            "ai_probability": round(ai_prob, 4),  # Maintenant c'est un float sûr
-            "crack_time_display": crack_time
+            "crack_time_display": crack_time,
+            "ai_probability": round(ai_prob, 4)
         },
         "feedback": feedback
     }
