@@ -6,4 +6,4 @@ router = APIRouter()
 
 @router.post("/test-password")
 async def test_password(data: PasswordRequest):
-    return analyse_password(data.password)
+    return analyse_password(data.password, data.model_type)
