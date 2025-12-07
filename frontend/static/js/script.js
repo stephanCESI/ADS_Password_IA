@@ -23,7 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const pLast = document.getElementById('target-lastname');
     const pDate = document.getElementById('target-birthdate');
     const pWord = document.getElementById('target-word');
-    // Nouveaux champs CP
     const pZipBirth = document.getElementById('target-zip-birth');
     const pZipHome = document.getElementById('target-zip-home');
 
@@ -58,32 +57,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ============================================================
-    // 3. GESTION DU SÉLECTEUR DE MODÈLE
-    // ============================================================
-    function updateModelDisplay() {
-        if (modelSelect && displaySpan) {
-            const selectedOption = modelSelect.options[modelSelect.selectedIndex];
-            if (selectedOption) {
-                displaySpan.textContent = selectedOption.text.split('(')[0].trim();
-            }
-        }
-    }
-
-    if (modelSelect) {
-        updateModelDisplay();
-        modelSelect.addEventListener('change', () => {
-            updateModelDisplay();
-            // Si on est sur l'onglet Home et qu'on a déjà un mdp
-            if (lastPassword && !document.getElementById('tab-home').classList.contains('hidden')) {
-                analyze(lastPassword);
-            }
-        });
-    }
-
-    // ============================================================
-    // 4. API & FONCTIONS D'ANALYSE
+    // 3. FONCTION API & ANALYSE CENTRALE
     // ============================================================
 
+    // Appel Serveur pur
     async function fetchAnalysis(password, model) {
         try {
             const response = await fetch("http://127.0.0.1:8000/test-password", {
@@ -98,15 +75,61 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- LOGIQUE ONGLET HOME ---
+    // Fonction d'analyse pour l'onglet HOME (Celle qui manquait !)
+    async function runHomeAnalysis(password) {
+        const selectedModel = modelSelect ? modelSelect.value : 'rf';
+
+        // Affichage du chargement
+        if (resultSolo) {
+            resultSolo.classList.remove('hidden');
+            resultSolo.innerHTML = '<div class="text-center text-muted"><i class="fa-solid fa-spinner fa-spin"></i> Analyse en cours...</div>';
+        }
+
+        const data = await fetchAnalysis(password, selectedModel);
+
+        if (resultSolo) {
+            if (data) {
+                console.log(`Résultat (${selectedModel}) :`, data);
+                renderCard(resultSolo, data);
+            } else {
+                resultSolo.innerHTML = '<div class="text-danger text-center">Erreur de connexion. Vérifiez le serveur.</div>';
+            }
+        }
+    }
+
+    // ============================================================
+    // 4. GESTION DU SÉLECTEUR DE MODÈLE
+    // ============================================================
+    function updateModelDisplay() {
+        if (modelSelect && displaySpan) {
+            const selectedOption = modelSelect.options[modelSelect.selectedIndex];
+            if (selectedOption) {
+                displaySpan.textContent = selectedOption.text.split('(')[0].trim();
+            }
+        }
+    }
+
+    if (modelSelect) {
+        updateModelDisplay();
+        modelSelect.addEventListener('change', () => {
+            updateModelDisplay();
+            // Si on est sur l'onglet Home et qu'on a déjà un mdp, on relance !
+            if (lastPassword && !document.getElementById('tab-home').classList.contains('hidden')) {
+                console.log("Changement de modèle, relance...");
+                runHomeAnalysis(lastPassword); // Appel de la fonction rétablie
+            }
+        });
+    }
+
+    // ============================================================
+    // 5. LOGIQUE ONGLET HOME
+    // ============================================================
     if (input && btn) {
-        // Apparition du bouton
         input.addEventListener('input', () => {
             if (input.value.trim().length > 0) btn.classList.add('visible');
             else btn.classList.remove('visible');
         });
 
-        // Touche Entrée
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -114,7 +137,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Style Focus
         input.addEventListener('focus', () => { btn.style.backgroundColor = '#30243F'; btn.style.color = '#e0d9f3'; });
         input.addEventListener('blur', () => { btn.style.backgroundColor = '#e0d9f3'; btn.style.color = '#30243F'; });
 
@@ -129,28 +151,20 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.classList.remove('visible');
             input.blur();
 
-            if (resultSolo) {
-                resultSolo.classList.remove('hidden');
-                resultSolo.innerHTML = '<div class="text-center text-muted"><i class="fa-solid fa-spinner fa-spin"></i> Analyse en cours...</div>';
-            }
-
-            const model = modelSelect ? modelSelect.value : 'rf';
-            const data = await fetchAnalysis(pwd, model);
-            if (resultSolo && data) renderCard(resultSolo, data);
+            // Appel de la fonction centrale
+            runHomeAnalysis(pwd);
         });
     }
 
     // ============================================================
-    // 5. LOGIQUE ONGLET "TARGETED ATTACK" (MIS À JOUR)
+    // 6. LOGIQUE ONGLET "TARGETED ATTACK"
     // ============================================================
     if (targetInput && targetBtn) {
-        // A. Apparition du bouton
         targetInput.addEventListener('input', () => {
             if (targetInput.value.trim().length > 0) targetBtn.classList.add('visible');
             else targetBtn.classList.remove('visible');
         });
 
-        // B. Touche Entrée
         targetInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -158,7 +172,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // C. Style Focus
         targetInput.addEventListener('focus', () => { targetBtn.style.backgroundColor = '#30243F'; targetBtn.style.color = '#e0d9f3'; });
         targetInput.addEventListener('blur', () => { targetBtn.style.backgroundColor = '#e0d9f3'; targetBtn.style.color = '#30243F'; });
 
@@ -166,6 +179,12 @@ document.addEventListener('DOMContentLoaded', () => {
         targetBtn.addEventListener('click', async () => {
             const pwd = targetInput.value;
             if (!pwd) return;
+
+            // --- ANIMATION LAYOUT SPLIT ---
+            const layoutContainer = document.getElementById('targetedContainer');
+            if (layoutContainer) {
+                layoutContainer.classList.add('layout-active');
+            }
 
             // UI Reset
             targetInput.value = "";
@@ -190,8 +209,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 { val: pFirst.value, name: "Prénom" },
                 { val: pLast.value, name: "Nom" },
                 { val: pWord.value, name: "Mot-clé" },
-                { val: pZipBirth.value, name: "CP Naissance" }, // Nouveau
-                { val: pZipHome.value, name: "CP Domicile" }    // Nouveau
+                { val: pZipBirth.value, name: "CP Naissance" },
+                { val: pZipHome.value, name: "CP Domicile" }
             ];
 
             checkList.forEach(item => {
@@ -227,9 +246,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-
     // ============================================================
-    // 6. FONCTION D'AFFICHAGE (RENDERER)
+    // 7. FONCTION D'AFFICHAGE (RENDERER)
     // ============================================================
     function renderCard(container, data, isMini = false, isHacked = false) {
         // Style
@@ -238,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (isHacked) {
             statusText = "COMPROMIS ☠️";
-            statusColor = "#ff0000"; // Rouge vif
+            statusColor = "#ff0000";
         } else if (data.score >= 80) {
             statusText = "EXCELLENT 🛡️"; statusColor = "#00e676";
         } else if (data.score >= 60) {
@@ -295,7 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <hr style="border-color:rgba(255,255,255,0.1)">
             
             <div class="mt-3 text-start ps-2 pe-2">
-                <h6 class="text-muted mb-3" style="font-size:0.8rem">DIAGNOSTIC :</h6>
+                <h6 class="text-muted mb-3" style="font-size:0.8rem">DIAGNOSTIC IA :</h6>
                 <div style="color: #e0d9f3;">${feedbackHTML}</div>
             </div>
         `;
@@ -312,7 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ============================================================
-    // 7. GESTION MENU BURGER & DOC
+    // 8. GESTION MENU BURGER & DOC
     // ============================================================
     if (burgerBtn) burgerBtn.addEventListener('click', () => { sideMenu.classList.add('open'); });
     if (closeMenuBtn) closeMenuBtn.addEventListener('click', () => { sideMenu.classList.remove('open'); });
