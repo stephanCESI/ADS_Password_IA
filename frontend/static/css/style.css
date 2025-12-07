@@ -400,3 +400,92 @@ body {
     letter-spacing: 1px;
     z-index: 2; /* Au-dessus de la barre colorée */
 }
+
+/* --- STYLE SPÉCIFIQUE TARGETED ATTACK --- */
+
+/* Bouton onglet rouge */
+.nav-btn.danger-tab:hover,
+.nav-btn.danger-tab.active {
+    background: rgba(255, 77, 77, 0.2);
+    color: #ff4d4d;
+    box-shadow: 0 0 15px rgba(255, 77, 77, 0.4);
+}
+
+.mode-title {
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px rgba(255, 77, 77, 0.3);
+}
+
+/* La Carte "Dossier Victime" */
+.profile-card {
+    background: rgba(20, 20, 30, 0.8);
+    border: 1px dashed rgba(255, 77, 77, 0.4); /* Bordure rouge pointillée */
+    border-radius: 15px;
+    padding: 25px;
+    width: 100%;
+    max-width: 700px;
+    position: relative;
+}
+
+.profile-card::before {
+    content: "CONFIDENTIEL";
+    position: absolute;
+    top: -10px;
+    left: 20px;
+    background: #1a1a2e;
+    color: #ff4d4d;
+    padding: 0 10px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    letter-spacing: 2px;
+}
+
+.profile-title {
+    color: #aaa;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 10px;
+}
+
+.profile-label {
+    font-size: 0.8rem;
+    color: #888;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.profile-input {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border-radius: 8px;
+    font-size: 0.95rem;
+}
+
+.profile-input:focus {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: #ff4d4d; /* Focus rouge */
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(255, 77, 77, 0.1);
+}
+
+/* Modification pour l'alerte Hack */
+.hacked-alert {
+    animation: glitch 0.3s cubic-bezier(.25, .46, .45, .94) both infinite;
+    color: #ff4d4d;
+    font-weight: bold;
+}
+
+@keyframes glitch {
+    0% { transform: translate(0) }
+    20% { transform: translate(-2px, 2px) }
+    40% { transform: translate(-2px, -2px) }
+    60% { transform: translate(2px, 2px) }
+    80% { transform: translate(2px, -2px) }
+    100% { transform: translate(0) }
+}
+

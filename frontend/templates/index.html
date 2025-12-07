@@ -16,6 +16,9 @@
         <button class="nav-btn active" data-tab="home">Home</button>
         <button class="nav-btn" data-tab="duel-pwd">Duel de mots de passe</button>
         <button class="nav-btn" data-tab="duel-model">Duel de modèles</button>
+        <button class="nav-btn danger-tab" data-tab="targeted">
+            <i class="fa-solid fa-user-secret"></i> Ciblée
+        </button>
     </nav>
 
     <!-- 1. BOUTON BURGER (Haut Gauche) -->
@@ -136,6 +139,63 @@
         <div class="d-flex justify-content-center align-items-center vh-100 flex-column">
             <h1 class="placeholder-title">Duel de modèles</h1>
             <p>Ici, on comparera le même mot de passe sur deux IA différentes.</p>
+        </div>
+    </div>
+
+    <!-- ONGLET 4 : ATTAQUE CIBLÉE -->
+    <div id="tab-targeted" class="tab-content hidden">
+        <div class="d-flex flex-column justify-content-center align-items-center min-vh-100 pt-5">
+
+            <h2 class="mode-title text-danger-custom mb-4">
+                <i class="fa-solid fa-crosshairs"></i> SIMULATION D'INGÉNIERIE SOCIALE
+            </h2>
+
+            <!-- ZONE DE PROFILAGE -->
+            <div class="profile-card mb-4">
+                <h5 class="profile-title">DOSSIER DE LA CIBLE</h5>
+                <div class="row g-3">
+                    <!-- Ligne 1 : Identité -->
+                    <div class="col-md-6">
+                        <label class="profile-label"><i class="fa-solid fa-user"></i> Prénom</label>
+                        <input id="target-firstname" type="text" class="form-control profile-input" placeholder="ex: Kevin">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="profile-label"><i class="fa-solid fa-signature"></i> Nom de famille</label>
+                        <input id="target-lastname" type="text" class="form-control profile-input" placeholder="ex: Dupont">
+                    </div>
+
+                    <!-- Ligne 2 : Date & Mot clé -->
+                    <div class="col-md-6">
+                        <label class="profile-label"><i class="fa-solid fa-cake-candles"></i> Date de Naissance</label>
+                        <input id="target-birthdate" type="date" class="form-control profile-input" style="color-scheme: dark;">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="profile-label"><i class="fa-solid fa-key"></i> Mot-clé (Chien/Ville)</label>
+                        <input id="target-word" type="text" class="form-control profile-input" placeholder="ex: Medor">
+                    </div>
+
+                    <!-- Ligne 3 : Codes Postaux (NOUVEAU) -->
+                    <div class="col-md-6">
+                        <label class="profile-label"><i class="fa-solid fa-map-pin"></i> CP Naissance</label>
+                        <input id="target-zip-birth" type="text" class="form-control profile-input" placeholder="ex: 75001">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="profile-label"><i class="fa-solid fa-house"></i> CP Domicile</label>
+                        <input id="target-zip-home" type="text" class="form-control profile-input" placeholder="ex: 69002">
+                    </div>
+                </div>
+            </div>
+
+            <!-- ZONE DE TEST -->
+            <div class="input-wrapper" style="margin-top: 0;">
+                <input id="target-pwd-input" type="text" class="form-control chat-input"
+                       placeholder="Mot de passe à tester sur ce profil..." autocomplete="off"/>
+                <button id="target-btn" class="circle-btn">➤</button>
+            </div>
+
+            <!-- RÉSULTAT SPÉCIFIQUE -->
+            <div id="target-result" class="result-card hidden"></div>
+
         </div>
     </div>
 
