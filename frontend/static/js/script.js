@@ -1,18 +1,24 @@
+/* version enregistrée + fix département */
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- VARIABLES GLOBALES ---
+    // ============================================================
+    // 1. VARIABLES & ÉLÉMENTS DU DOM
+    // ============================================================
     const navButtons = document.querySelectorAll('.nav-btn');
     const tabContents = document.querySelectorAll('.tab-content');
 
+    // Home
     const input = document.getElementById('passwordInput');
     const btn = document.getElementById('sendBtn');
     const wrapper = document.getElementById('homeInputWrapper');
     const resultSolo = document.getElementById('resultSolo');
 
+    // Targeted Attack
     const targetInput = document.getElementById('target-pwd-input');
     const targetBtn = document.getElementById('target-btn');
     const targetResult = document.getElementById('target-result');
 
+    // Profil
     const pFirst = document.getElementById('target-firstname');
     const pLast = document.getElementById('target-lastname');
     const pDate = document.getElementById('target-birthdate');
@@ -20,9 +26,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const pZipBirth = document.getElementById('target-zip-birth');
     const pZipHome = document.getElementById('target-zip-home');
 
+    // Sélecteur
     const modelSelect = document.getElementById('modelSelect');
     const displaySpan = document.getElementById('selectedModelText');
 
+    // Menu & Doc
     const burgerBtn = document.getElementById('burgerBtn');
     const sideMenu = document.getElementById('sideMenu');
     const closeMenuBtn = document.getElementById('closeMenuBtn');
@@ -33,7 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let lastPassword = "";
 
-    // --- NAVIGATION ---
+    // ============================================================
+    // 2. GESTION DE LA NAVIGATION
+    // ============================================================
     navButtons.forEach(btnTab => {
         btnTab.addEventListener('click', () => {
             navButtons.forEach(b => b.classList.remove('active'));
@@ -44,7 +54,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- SELECTEUR MODÈLE ---
+    // ============================================================
+    // 3. GESTION DU SÉLECTEUR DE MODÈLE
+    // ============================================================
     function updateModelDisplay() {
         if (modelSelect && displaySpan) {
             const selectedOption = modelSelect.options[modelSelect.selectedIndex];
@@ -61,7 +73,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- API ---
+    // ============================================================
+    // 4. API & ANALYSE
+    // ============================================================
     async function fetchAnalysis(password, model) {
         try {
             const response = await fetch("http://127.0.0.1:8000/test-password", {
@@ -86,7 +100,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (resultSolo && data) renderCard(resultSolo, data);
     }
 
-    // --- HOME (SOLO) ---
+    // ============================================================
+    // 5. LOGIQUE ONGLET HOME
+    // ============================================================
     if (input && btn) {
         input.addEventListener('input', () => {
             input.value.trim().length > 0 ? btn.classList.add('visible') : btn.classList.remove('visible');
@@ -100,14 +116,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!pwd) return;
             lastPassword = pwd;
             if (wrapper) wrapper.classList.add('moved-up');
-            input.value = "";
-            btn.classList.remove('visible');
-            input.blur();
+            input.value = ""; btn.classList.remove('visible'); input.blur();
             runHomeAnalysis(pwd);
         });
     }
 
-    // --- TARGETED ATTACK ---
+    // ============================================================
+    // 6. LOGIQUE ONGLET "TARGETED ATTACK" (FINAL)
+    // ============================================================
     if (targetInput && targetBtn) {
         targetInput.addEventListener('input', () => {
             targetInput.value.trim().length > 0 ? targetBtn.classList.add('visible') : targetBtn.classList.remove('visible');
@@ -120,7 +136,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const pwd = targetInput.value;
             if (!pwd) return;
 
-            // ANIMATION SPLIT VIEW
             const layoutContainer = document.getElementById('targetedContainer');
             if (layoutContainer) layoutContainer.classList.add('layout-active');
 
@@ -136,29 +151,68 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!data) { targetResult.innerHTML = "Erreur API"; return; }
 
-            // Vérification Profil
+            // --- VÉRIFICATION DU PROFIL ---
+            // 2. VÉRIFICATION DU PROFIL AMÉLIORÉE
             let compromised = [];
+
+            // On nettoie les entrées
             const checkList = [
-                { val: pFirst.value, name: "Prénom" }, { val: pLast.value, name: "Nom" },
-                { val: pWord.value, name: "Mot-clé" }, { val: pZipBirth.value, name: "CP Naissance" },
-                { val: pZipHome.value, name: "CP Domicile" }
+                { val: pFirst.value.trim(), name: "Prénom" },
+                { val: pLast.value.trim(), name: "Nom" },
+                { val: pWord.value.trim(), name: "Mot-clé" },
+                { val: pZipBirth.value.trim(), name: "CP Naissance" },
+                { val: pZipHome.value.trim(), name: "CP Domicile" }
             ];
+
             checkList.forEach(item => {
-                if (item.val && item.val.length > 2) {
-                    if (pwd.toLowerCase().includes(item.val.toLowerCase())) compromised.push(item.name + " (" + item.val + ")");
+                const val = item.val;
+                // On ignore les champs vides ou trop courts (moins de 2 lettres)
+                if (val && val.length >= 2) {
+                    const valLower = val.toLowerCase();
+                    const pwdLower = pwd.toLowerCase();
+
+                    // CAS 1 : Correspondance Exacte (ex: "Kevin" dans "SuperKevin")
+                    if (pwdLower.includes(valLower)) {
+                        compromised.push(item.name + " (" + item.val + ")");
+                    }
+
+                    // CAS 2 : Détection de Surnom / Diminutif (NOUVEAU)
+                    // Si le mot fait au moins 5 lettres (ex: "Kevin", "Thomas", "Nicolas")
+                    // On vérifie si les 3 premières lettres sont utilisées (ex: "Kev", "Tom", "Nic")
+                    else if (val.length >= 5) {
+                        const nickname = valLower.substring(0, 3); // On prend les 3 premiers
+                        if (pwdLower.includes(nickname)) {
+                            // On vérifie que ce n'est pas un faux positif trop court
+                            compromised.push(`Surnom dérivé de ${item.name} (${nickname}...)`);
+                        }
+                    }
+
+                    // CAS 3 : Gestion Spéciale Code Postal (Département)
+                    if (item.name.startsWith("CP")) {
+                        const dept = val.substring(0, 2); // Les 2 premiers chiffres
+                        // Si détecté ET que ce n'est pas déjà détecté par la correspondance exacte
+                        if (pwd.includes(dept) && !pwdLower.includes(valLower)) {
+                            const deptName = item.name.replace("CP ", "");
+                            compromised.push(`Département ${deptName} (${dept})`);
+                        }
+                    }
                 }
             });
+
+            // Vérification Dates
             if (pDate.value) {
                 const dateObj = new Date(pDate.value);
                 const year = dateObj.getFullYear().toString();
                 const shortYear = year.slice(-2);
                 const day = String(dateObj.getDate()).padStart(2, '0');
                 const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+
                 if (pwd.includes(year)) compromised.push(`Année (${year})`);
                 else if (pwd.includes(shortYear)) compromised.push(`Année courte (${shortYear})`);
                 if (pwd.includes(day + month)) compromised.push(`Anniversaire (${day}${month})`);
             }
 
+            // --- RESULTAT ---
             if (compromised.length > 0) {
                 data.score = 0; data.is_strong = false;
                 const alertMsg = `<b>🚨 DANGER CRITIQUE :</b> Ingénierie Sociale détectée !<br>Éléments trouvés : ${compromised.join(", ")}.`;
@@ -168,7 +222,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- RENDER CARD ---
+    // ============================================================
+    // 7. FONCTION D'AFFICHAGE (RENDERER)
+    // ============================================================
     function renderCard(container, data, isMini = false, isHacked = false) {
         let statusText = "VULNÉRABLE", statusColor = "#ff4d4d";
         if (isHacked) { statusText = "COMPROMIS ☠️"; statusColor = "#ff0000"; }
@@ -180,7 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (data.feedback && data.feedback.length > 0) {
             feedbackHTML = data.feedback.map(f => {
                 let icon = "fa-xmark", color = "#ff4d4d";
-                if (f.toLowerCase().includes("excellent")) { icon = "fa-check"; color = "#00e676"; }
+                if (f.toLowerCase().includes("excellent") || f.toLowerCase().includes("bravo")) { icon = "fa-check"; color = "#00e676"; }
                 if (f.includes("DANGER")) { icon = "fa-skull-crossbones"; color = "#ff0000"; }
                 return `<div class="d-flex align-items-start mb-1"><i class="fa-solid ${icon} me-2 mt-1" style="color:${color}"></i> <span>${f}</span></div>`;
             }).join('');
@@ -202,21 +258,20 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div class="row text-center mt-4 mb-4">
                 <div class="col-6 border-end border-secondary">
-                    <small class="text-white d-block" style="font-size:0.7rem;text-transform:uppercase;">Temps estimé (Bruteforce)</small>
+                    <small class="text-muted d-block" style="font-size:0.7rem;text-transform:uppercase;">Temps estimé (Bruteforce)</small>
                     <span class="fw-bold text-white fs-5">${data.details.crack_time_display}</span>
                 </div>
                 <div class="col-6">
-                    <small class="text-white d-block" style="font-size:0.7rem;text-transform:uppercase;">Complexité (Entropie)</small>
+                    <small class="text-muted d-block" style="font-size:0.7rem;text-transform:uppercase;">Complexité (Entropie)</small>
                     <span class="fw-bold text-white fs-5">${data.details.entropy_bits} bits</span>
                 </div>
             </div>
             <hr style="border-color:rgba(255,255,255,0.1)">
             <div class="mt-3 text-start ps-2 pe-2">
-                <h6 class="text-white mb-3" style="font-size:0.8rem">DIAGNOSTIC :</h6>
+                <h6 class="text-muted mb-3" style="font-size:0.8rem">DIAGNOSTIC :</h6>
                 <div style="color: #e0d9f3;">${feedbackHTML}</div>
             </div>
         `;
-
         setTimeout(() => {
             const track = container.querySelector('.score-track');
             const bar = container.querySelector('.score-fill');
@@ -228,7 +283,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 50);
     }
 
-    // --- MENU BURGER ---
+    // ============================================================
+    // 8. MENU BURGER
+    // ============================================================
     if (burgerBtn) burgerBtn.addEventListener('click', () => { sideMenu.classList.add('open'); });
     if (closeMenuBtn) closeMenuBtn.addEventListener('click', () => { sideMenu.classList.remove('open'); });
     document.addEventListener('click', (e) => {
