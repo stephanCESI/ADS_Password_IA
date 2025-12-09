@@ -7,7 +7,6 @@ import traceback
 import pickle
 
 # --- GESTION DES DÉPENDANCES LOURDES ---
-# On gère le cas où TensorFlow ou XGBoost ne seraient pas installés
 try:
     import tensorflow as tf
     from tensorflow.keras.preprocessing.sequence import pad_sequences
@@ -34,33 +33,42 @@ DL_DATA_DIR = BASE_DIR / "datasets" / "deep_learning_data"
 DICT_DIR = BASE_DIR / "datasets" / "Dictionnaries" / "processed"
 
 # --- VARIABLES GLOBALES ---
-loaded_ml_models = {}  # Pour RF, XGB, LogReg
-loaded_dl_models = {}  # Pour CNN, LSTM, DNN
-tokenizer = None  # Pour convertir le texte en chiffres (DL)
-dl_config = None  # Pour connaître la taille max (32 chars)
+loaded_ml_models = {}  # RF, XGB, LOG
+loaded_dl_models = {}  # CNN, LSTM, DNN
+meta_model = None  # Le Juge Hybride
+tokenizer = None
+dl_config = None
 dictionaries = None
 
 
 def load_resources():
-    global loaded_ml_models, loaded_dl_models, tokenizer, dl_config, dictionaries
+    global loaded_ml_models, loaded_dl_models, meta_model, tokenizer, dl_config, dictionaries
 
-    # 1. Chargement des Modèles Machine Learning (.pkl)
-    ml_files = {
+    # 1. Chargement ML (Sklearn/XGB)
+    # On gère les noms de fichiers spécifiques
+    ml_map = {
         "rf": "random_forest.pkl",
         "xgb": "xgboost.pkl",
         "log": "logistic_regression.pkl"
     }
     print("--- Chargement ML ---")
-    for key, fname in ml_files.items():
-        path = MODEL_DIR / fname
-        if path.exists():
+    for key, fname in ml_map.items():
+        if (MODEL_DIR / fname).exists():
             try:
-                loaded_ml_models[key] = joblib.load(path)
+                loaded_ml_models[key] = joblib.load(MODEL_DIR / fname)
                 print(f"✅ ML: {key.upper()} chargé.")
             except:
-                print(f"❌ Erreur chargement {fname}")
+                print(f"❌ Erreur {fname}")
 
-    # 2. Chargement des Modèles Deep Learning (.keras)
+    # 2. Chargement Hybride (Meta-Modèle)
+    if (MODEL_DIR / "hybrid_meta.pkl").exists():
+        try:
+            meta_model = joblib.load(MODEL_DIR / "hybrid_meta.pkl")
+            print("✅ HYBRIDE (Juge) chargé.")
+        except:
+            print("❌ Erreur Hybride")
+
+    # 3. Chargement DL (Keras)
     if HAS_TF:
         print("--- Chargement DL ---")
         dl_files = {
@@ -69,15 +77,14 @@ def load_resources():
             "dnn": "dnn_simple.keras"
         }
         for key, fname in dl_files.items():
-            path = MODEL_DIR / fname
-            if path.exists():
+            if (MODEL_DIR / fname).exists():
                 try:
-                    loaded_dl_models[key] = tf.keras.models.load_model(path)
+                    loaded_dl_models[key] = tf.keras.models.load_model(MODEL_DIR / fname)
                     print(f"✅ DL: {key.upper()} chargé.")
                 except:
                     print(f"❌ Erreur chargement {fname}")
 
-        # Chargement du Tokenizer (Indispensable pour le DL)
+        # Tokenizer
         try:
             with open(DL_DATA_DIR / "tokenizer.pickle", "rb") as f:
                 tokenizer = pickle.load(f)
@@ -85,9 +92,9 @@ def load_resources():
                 dl_config = pickle.load(f)
             print(f"✅ Tokenizer chargé (Max Len: {dl_config['max_len']})")
         except:
-            print("⚠️ Tokenizer introuvable. Le DL ne pourra pas traiter le texte.")
+            print("⚠️ Tokenizer introuvable.")
 
-    # 3. Chargement du Dictionnaire Linguistique
+    # 4. Chargement Dictionnaire
     try:
         corpus = pd.read_csv(DICT_DIR / "linguistic_dictionary.csv")
         corpus['token'] = corpus['token'].astype(str).str.lower().str.strip()
@@ -99,11 +106,10 @@ def load_resources():
         }
         print(f"✅ Dictionnaire chargé : {len(corpus)} entrées.")
     except:
-        print("⚠️ Dictionnaire introuvable.")
         dictionaries = None
 
 
-# On lance tout au démarrage
+# Chargement au démarrage
 load_resources()
 
 
@@ -116,10 +122,12 @@ def get_linguistic_features(password):
     clean_pwd = re.sub(r'[^a-z]', '', pwd_lower)
     clean_rev = clean_pwd[::-1]
 
+    # Leak check
     if pwd_lower in dictionaries['weak'] or pwd_lower[::-1] in dictionaries['weak']:
         features['is_weak_exact'] = 1
 
     if len(clean_pwd) >= 4:
+        # Endroit
         if clean_pwd in dictionaries['words'] or clean_pwd in dictionaries['weak']:
             features['has_word'] = 1
         elif clean_pwd in dictionaries['names']:
@@ -127,6 +135,7 @@ def get_linguistic_features(password):
         elif clean_pwd in dictionaries['places']:
             features['has_place'] = 1
 
+        # Envers
         if clean_rev in dictionaries['words'] or clean_rev in dictionaries['weak']:
             features['has_word'] = 1
         elif clean_rev in dictionaries['names']:
@@ -145,66 +154,97 @@ def check_patterns(password):
 
 
 def prepare_dl_input(password):
-    """Prépare le mot de passe pour le CNN/LSTM (Tokenization + Padding)"""
     if not tokenizer or not dl_config: return None
-    # Transformation en suite de chiffres
     seq = tokenizer.texts_to_sequences([str(password)])
-    # Padding pour atteindre 32 caractères (avec des 0)
-    padded = pad_sequences(seq, maxlen=dl_config['max_len'], padding='post', truncating='post')
-    return padded
+    return pad_sequences(seq, maxlen=dl_config['max_len'], padding='post', truncating='post')
 
 
-# --- FONCTION PRINCIPALE (ROUTAGE) ---
+# --- FONCTION PRINCIPALE ---
 
 def analyse_password(password: str, model_type: str = "rf"):
-    # 1. Calculs classiques (On les fait TOUJOURS pour le feedback et l'entropie)
+    # 1. Calculs
     entropy = compute_entropy(password)
     length_norm = compute_length_norm(password)
     diversity = compute_diversity(password)
     linguistic = get_linguistic_features(password)
     crack_time = calculate_bruteforce_time(password)
 
-    # 2. Prédiction IA
+    # 2. Prépa ML (Features)
+    features_df = pd.DataFrame([{
+        'length_norm': length_norm, 'diversity': diversity, 'entropy': entropy,
+        'is_weak_exact': linguistic['is_weak_exact'], 'has_word': linguistic['has_word'],
+        'has_name': linguistic['has_name'], 'has_place': linguistic['has_place']
+    }])
+    # Ordre strict
+    features_df = features_df[
+        ['length_norm', 'diversity', 'entropy', 'is_weak_exact', 'has_word', 'has_name', 'has_place']]
+
     ai_prob = 0.0
 
-    # CAS A : Modèle Deep Learning (CNN, LSTM...)
-    if model_type in ['cnn', 'lstm', 'dnn']:
-        if HAS_TF and model_type in loaded_dl_models:
+    # --- LOGIQUE DE PRÉDICTION ---
+
+    # CAS 1 : MODE HYBRIDE (Tous les modèles votent)
+    if model_type == 'hybrid':
+        # On collecte les votes de tout le monde
+        votes = {}
+
+        # ML
+        for m in ['rf', 'xgb', 'log']:
+            votes[m] = 0.0
+            if m in loaded_ml_models:
+                try:
+                    votes[m] = float(loaded_ml_models[m].predict_proba(features_df)[0][1])
+                except:
+                    pass
+
+        # DL
+        dl_in = prepare_dl_input(password)
+        for m in ['cnn', 'lstm', 'dnn']:
+            votes[m] = 0.0
+            if m in loaded_dl_models and dl_in is not None:
+                try:
+                    votes[m] = float(loaded_dl_models[m].predict(dl_in, verbose=0)[0][0])
+                except:
+                    pass
+
+        # Le Juge (Meta-Model) décide
+        if meta_model:
+            # Ordre des colonnes CRITIQUE (doit matcher train_hybrid.py)
+            vote_df = pd.DataFrame(
+                [[votes['rf'], votes['xgb'], votes['log'], votes['cnn'], votes['lstm'], votes['dnn']]],
+                columns=['rf', 'xgb', 'log', 'cnn', 'lstm', 'dnn'])
             try:
-                input_data = prepare_dl_input(password)
-                if input_data is not None:
-                    # Prédiction DL (retourne [[0.998]])
-                    ai_prob = float(loaded_dl_models[model_type].predict(input_data, verbose=0)[0][0])
-            except Exception as e:
-                print(f"❌ Erreur DL ({model_type}): {e}")
+                ai_prob = float(meta_model.predict_proba(vote_df)[0][1])
+            except:
+                ai_prob = votes['rf']  # Fallback sur RF si le juge plante
         else:
-            print(f"⚠️ Modèle DL '{model_type}' non disponible.")
+            ai_prob = votes['rf']  # Fallback sur RF si pas de juge
 
-    # CAS B : Modèle Machine Learning Classique (RF, XGB...)
+    # CAS 2 : Modèle Deep Learning Spécifique
+    elif model_type in ['cnn', 'lstm', 'dnn']:
+        if model_type in loaded_dl_models:
+            dlin = prepare_dl_input(password)
+            if dlin is not None:
+                try:
+                    ai_prob = float(loaded_dl_models[model_type].predict(dlin, verbose=0)[0][0])
+                except:
+                    pass
+
+    # CAS 3 : Modèle Machine Learning Spécifique
     else:
-        # On prépare le DataFrame de features
-        features_df = pd.DataFrame([{
-            'length_norm': length_norm, 'diversity': diversity, 'entropy': entropy,
-            'is_weak_exact': linguistic['is_weak_exact'], 'has_word': linguistic['has_word'],
-            'has_name': linguistic['has_name'], 'has_place': linguistic['has_place']}
-        ])
-        # Ordre forcé
-        features_df = features_df[
-            ['length_norm', 'diversity', 'entropy', 'is_weak_exact', 'has_word', 'has_name', 'has_place']]
-
-        # On récupère le modèle ML
-        model = loaded_ml_models.get(model_type, loaded_ml_models.get('rf'))
-        if model:
+        # On récupère le modèle, ou RF par défaut
+        mod = loaded_ml_models.get(model_type, loaded_ml_models.get('rf'))
+        if mod:
             try:
-                ai_prob = float(model.predict_proba(features_df)[0][1])
+                ai_prob = float(mod.predict_proba(features_df)[0][1])
             except:
                 pass
 
-    # 3. Résultat Final
+    # 3. Score Final
     score_final = int(ai_prob * 100)
     is_strong = score_final > 50
 
-    # 4. Feedback (Indépendant du modèle, basé sur les règles)
+    # 4. Feedback
     feedback = []
     if len(password) < 8: feedback.append("Trop court")
     if diversity < 0.5: feedback.append("Manque de variété")
