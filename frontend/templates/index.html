@@ -56,8 +56,8 @@
     <!-- SÉLECTEUR DE MODÈLE -->
     <div class="model-selector-wrapper">
         <div class="selector-visual">
-            <i class="fa-solid fa-brain" style="color: #aaa; margin-right: 8px;"></i>
-            <span class="model-label">Cerveau :</span>
+            <i class="fa-solid fa-microchip" style="color: #aaa; margin-right: 8px;"></i>
+            <span class="model-label">Modèle :</span>
             <span id="selectedModelText" style="color: #e0d9f3; font-weight: bold; margin-left: 5px;">CNN (Deep Learning)</span>
             <i class="fa-solid fa-chevron-down ms-2" style="font-size: 0.8em; opacity: 0.7;"></i>
         </div>
@@ -79,11 +79,19 @@
     <!-- ONGLET 1 : HOME -->
     <div id="tab-home" class="tab-content active">
         <div class="home-container">
+
+            <!-- La barre d'input -->
             <div class="input-wrapper" id="homeInputWrapper">
-                <input id="passwordInput" type="text" class="form-control chat-input" placeholder="Tapez votre mot de passe..."/>
+                <input id="passwordInput" type="text" class="form-control chat-input"
+                       placeholder="Tapez un mot de passe à analyser..."/>
                 <button id="sendBtn" class="circle-btn">➤</button>
             </div>
-            <div id="resultSolo" class="result-card hidden"></div>
+
+            <!-- NOUVEAU : Zone flexible pour centrer le résultat -->
+            <div class="home-result-area">
+                <div id="resultSolo" class="result-card hidden"></div>
+            </div>
+
         </div>
     </div>
 
@@ -98,12 +106,12 @@
                 <button id="copy-btn" class="copy-icon" title="Copier"><i class="fa-regular fa-copy"></i></button>
             </div>
 
-            <!-- Boutons d'action -->
-            <div class="d-flex gap-3 mb-5">
-                <button id="btn-generate" class="btn-action" style="background: linear-gradient(135deg, #00b09b, #96c93d);">
+            <div class="d-flex gap-4 mb-4">
+                <button id="btn-generate" class="btn-action btn-gen">
                     <i class="fa-solid fa-rotate"></i> GÉNÉRER
                 </button>
-                <button id="btn-analyze-gen" class="btn-action hidden"> <!-- Caché au début -->
+
+                <button id="btn-analyze-gen" class="btn-action btn-analyze hidden">
                     <i class="fa-solid fa-magnifying-glass-chart"></i> ANALYSER
                 </button>
             </div>
@@ -178,7 +186,7 @@
             <!-- ZONE TEST (En bas au départ) -->
             <div id="targetInputContainer" class="target-floating-input">
                 <input id="target-pwd-input" type="text" class="form-control chat-input"
-                       placeholder="Mot de passe à tester sur ce profil..." autocomplete="off"/>
+                       placeholder="Tapez un mot de passe à tester sur ce profil..." autocomplete="off"/>
                 <button id="target-btn" class="circle-btn">➤</button>
             </div>
 

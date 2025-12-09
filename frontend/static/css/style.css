@@ -6,6 +6,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    /* On s'assure qu'il prend bien toute la hauteur */
+    height: 100vh;
 }
 
 /* --- L'INPUT WRAPPER (Barre de recherche) --- */
@@ -13,14 +15,40 @@
     position: relative;
     width: 50%;
     max-width: 600px;
+
+    /* Position de départ (Centré visuellement) */
     margin-top: 40vh;
+
     transition: margin-top 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
     z-index: 100;
+
+    /* Important : on empêche la barre de s'écraser */
+    flex-shrink: 0;
 }
 
-/* --- LA CLASSE QU'ON AJOUTERA EN JS --- */
+/* --- QUAND LA BARRE MONTE --- */
 .input-wrapper.moved-up {
+    /* Elle se place sous la navbar */
     margin-top: 120px;
+}
+
+.home-result-area {
+    /* MAGIE FLEXBOX : Prend tout l'espace restant en dessous de la barre */
+    flex-grow: 1;
+
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+
+    /* Centre le contenu (la carte) verticalement et horizontalement */
+    justify-content: center;
+    align-items: center;
+
+    /* Petit ajustement pour ne pas coller au bas de l'écran */
+    padding-bottom: 50px;
+
+    /* Permet le scroll si l'écran est trop petit en hauteur */
+    overflow-y: auto;
 }
 
 /* --- BASE --- */
@@ -106,29 +134,85 @@ body {
     top: 25px;
     right: 30px;
     z-index: 1100;
-    background: rgba(48, 36, 63, 0.6);
-    backdrop-filter: blur(5px);
-    padding: 8px 20px;
-    border-radius: 50px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    transition: all 0.3s ease;
+
+    /* Design "Glassmorphism" Sombre */
+    background: rgba(30, 25, 40, 0.85); /* Plus sombre pour le contraste */
+    backdrop-filter: blur(12px);
+
+    /* Forme et Bordure */
+    border-radius: 12px; /* Un peu moins rond, plus "Tech" */
+    border: 1px solid rgba(224, 217, 243, 0.15); /* Bordure fine claire */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); /* Ombre portée */
+
+    padding: 10px 20px;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+
     cursor: pointer;
     overflow: hidden;
+
+    /* Flexbox pour aligner l'icône et le texte */
+    display: flex;
+    align-items: center;
+    min-width: 200px; /* Largeur minimale pour que ça ne bouge pas trop */
+    justify-content: space-between;
 }
+
 .model-selector-wrapper:hover {
-    background: rgba(48, 36, 63, 0.9);
+    background: rgba(48, 36, 63, 0.95);
     border-color: #e0d9f3;
-    box-shadow: 0 0 15px rgba(48, 36, 63, 0.5);
+    box-shadow: 0 0 20px rgba(118, 75, 162, 0.4); /* Glow violet au survol */
+    transform: translateY(1px);
 }
-.model-label { color: #aaa; font-size: 0.9rem; font-weight: 600; margin: 0; }
 
+.model-label {
+    color: #aaa;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-right: 10px;
+}
+
+#selectedModelText {
+    color: #fff;
+    font-weight: bold;
+    font-size: 0.95rem;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
+/* --- LE SELECT INVISIBLE (MAIS STYLISÉ) --- */
 .full-click-select {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    opacity: 0; cursor: pointer;
-    appearance: none; -webkit-appearance: none; border: none;
-}
-.full-click-select option { background-color: #1a1a2e; color: #fff; padding: 10px; font-size: 1rem; }
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
 
+    opacity: 0; /* Reste invisible pour le clic */
+    cursor: pointer;
+    appearance: none;
+    border: none;
+
+    /* ASTUCE : On force le schéma de couleur sombre pour le menu déroulant natif */
+    color-scheme: dark;
+}
+
+/* STYLE DU MENU DÉROULANT (Quand il s'ouvre) */
+/* Note : Le support dépend du navigateur, mais cela force le fond sombre sur Chrome/Edge */
+.full-click-select option {
+    background-color: #1a1a2e; /* Fond très sombre */
+    color: #e0d9f3; /* Texte clair */
+    padding: 15px; /* Espacement */
+    font-size: 1rem;
+}
+
+.full-click-select optgroup {
+    background-color: #0f0f1a; /* Fond encore plus sombre pour les titres */
+    color: #8b80a8; /* Titre violet/gris */
+    font-weight: bold;
+    font-style: normal;
+    padding: 10px;
+}
 
 /* --- MENU LATÉRAL, DOC, ETC --- */
 .burger-btn {
@@ -261,42 +345,134 @@ body {
 }
 
 /* --- LAYOUT ATTAQUE CIBLÉE (SPLIT VIEW) --- */
+
 .targeted-layout-container {
     min-height: 100vh;
-    display: flex; flex-direction: column; align-items: center;
-    padding-top: 150px; /* Augmenté pour compenser l'absence du titre */
-    transition: all 0.5s ease;
-}
-
-.dual-panel {
-    display: flex; flex-direction: column; /* Par défaut colonne */
-    align-items: center; width: 100%; max-width: 1200px;
-    gap: 30px; margin-top: 30px; transition: all 0.5s ease;
-}
-
-.panel-left, .panel-right {
-    width: 100%; display: flex; justify-content: center;
-    transition: all 0.5s ease;
-}
-
-.panel-right { min-height: 0; }
-
-/* ÉTAT ACTIVÉ (SPLIT) */
-.layout-active .dual-panel {
-    flex-direction: row; /* On passe en ligne */
+    display: flex;
+    flex-direction: column;
     align-items: center;
+    /* On garde un peu d'espace en haut pour le titre */
+    padding-top: 100px;
+    position: relative;
 }
+
+/* Le titre ne doit pas bouger */
+.mode-title {
+    flex-shrink: 0; /* Empêche le titre d'être écrasé */
+    margin-bottom: 0;
+}
+
+/* Le conteneur flexible (Profil + Résultat) */
+.dual-panel {
+    /* ÉTAT INITIAL : PAS de flex-grow, on veut qu'il soit compact avec l'input */
+    width: 100%;
+    max-width: 1200px;
+
+    display: flex;
+    /* État initial : Colonne (Profil au centre) */
+    flex-direction: column;
+
+    /* CENTRAGE TOTAL (Vertical + Horizontal) */
+    justify-content: center;
+    align-items: center;
+
+    gap: 30px;
+    transition: all 0.5s ease;
+
+    /* CORRECTION ICI : Au lieu de 'auto' qui pousse tout en bas,
+       on utilise une marge fixe relative (vh) pour centrer visuellement sous le titre.
+    */
+    margin-top: 10vh;
+    margin-bottom: 30px;
+}
+
+/* Panneaux individuels */
+.panel-left, .panel-right {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    transition: all 0.5s ease;
+}
+
+.panel-right {
+    display: none; /* Caché au début */
+}
+
+/* INPUT FLOTTANT (Barre de recherche) */
+.target-floating-input {
+    position: relative;
+    width: 50%;
+    max-width: 600px;
+    z-index: 100;
+
+    /* CORRECTION : On retire le margin-bottom: auto qui pouvait causer des soucis */
+    margin-bottom: 50px;
+    flex-shrink: 0;
+
+    transition: all 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+
+/* --- ÉTAT ACTIVÉ (ANIMATION SPLIT) --- */
+
+/* 1. La barre monte en position fixe */
+.layout-active .target-floating-input {
+    position: fixed;
+    top: 120px; /* Même hauteur que l'onglet Home */
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
+    width: 60%;
+}
+
+/* 2. Le panneau s'adapte */
+.layout-active .dual-panel {
+    /* On réactive le flex-grow pour qu'il prenne toute la place en mode Split */
+    flex-grow: 1;
+
+    /* On remplace la marge de centrage (10vh) par la marge finale du layout */
+    margin-top: 80px;
+    margin-bottom: 0;
+
+    /* On passe en ligne (Gauche / Droite) */
+    flex-direction: row;
+
+    /* On garde le centrage vertical dans l'espace disponible ! */
+    align-items: center;
+
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
 .layout-active .panel-left {
-    width: 45%; justify-content: flex-end;
+    width: 45%;
+    justify-content: flex-end;
+    padding-right: 20px;
 }
+
 .layout-active .panel-right {
-    width: 55%; justify-content: flex-start; display: block;
+    width: 55%;
+    justify-content: flex-start;
+    display: block;
+    padding-left: 20px;
+    animation: slideInRight 0.8s ease;
 }
+
+/* Ajustement Profil */
 .layout-active .profile-card {
-    max-width: 100%; border-color: rgba(255, 77, 77, 0.6);
+    max-width: 100%;
+    border-color: rgba(255, 77, 77, 0.6);
 }
+
+/* Ajustement Résultat */
 .layout-active .result-card {
-    margin-top: 0; width: 100%;
+    margin-top: 0;
+    width: 100%;
+}
+
+@keyframes slideInRight {
+    from { opacity: 0; transform: translateX(50px); }
+    to { opacity: 1; transform: translateX(0); }
 }
 
 /* INPUT FLOTTANT TARGET */
@@ -319,13 +495,13 @@ body {
     background: rgba(0, 0, 0, 0.4);
     border: 2px solid rgba(0, 230, 118, 0.3); /* Vert Matrix */
     border-radius: 15px;
-    padding: 20px 40px;
+    padding: 25px 50px; /* Plus d'espace */
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 2rem;
     color: #fff;
     letter-spacing: 2px;
     position: relative;
-    min-width: 300px;
+    min-width: 400px;
     text-align: center;
     box-shadow: 0 0 20px rgba(0, 230, 118, 0.1);
     transition: all 0.3s ease;
@@ -334,21 +510,54 @@ body {
 .generator-display-box:hover {
     border-color: #00e676;
     box-shadow: 0 0 30px rgba(0, 230, 118, 0.2);
+    transform: scale(1.02);
 }
 
 .copy-icon {
-    position: absolute;
-    top: 50%;
-    right: 15px;
-    transform: translateY(-50%);
-    background: none;
+    position: absolute; top: 50%; right: 20px; transform: translateY(-50%);
+    background: none; border: none; color: #aaa; font-size: 1.2rem; cursor: pointer;
+    transition: all 0.2s;
+}
+.copy-icon:hover { color: #fff; transform: translateY(-50%) scale(1.2); }
+
+/* --- NOUVEAUX BOUTONS --- */
+.btn-action {
     border: none;
-    color: #aaa;
-    font-size: 1.2rem;
+    padding: 15px 40px; /* Gros boutons confortables */
+    border-radius: 50px; /* Forme de pilule */
+    color: white;
+    font-weight: 800;
+    font-size: 1.1rem;
+    letter-spacing: 1px;
     cursor: pointer;
-    transition: color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Espace icône/texte */
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    text-transform: uppercase;
 }
 
-.copy-icon:hover { color: #fff; }
+/* Style Vert (Générer) */
+.btn-gen {
+    background: linear-gradient(135deg, #11998e, #38ef7d); /* Dégradé Émeraude */
+    box-shadow: 0 4px 15px rgba(56, 239, 125, 0.4); /* Ombre lumineuse verte */
+}
 
-.text-success-custom { color: #00e676; }
+/* Style Violet (Analyser) */
+.btn-analyze {
+    background: linear-gradient(135deg, #667eea, #764ba2); /* Dégradé Violet Profond */
+    box-shadow: 0 4px 15px rgba(118, 75, 162, 0.4); /* Ombre lumineuse violette */
+}
+
+/* Effets au survol */
+.btn-action:hover {
+    transform: translateY(-3px) scale(1.05); /* Monte légèrement */
+    filter: brightness(1.15); /* Devient plus brillant */
+}
+
+.btn-action:active {
+    transform: translateY(0) scale(0.98); /* Clic */
+}
+
+/* Helpers couleurs */
+.text-success-custom { color: #00e676; text-shadow: 0 0 15px rgba(0, 230, 118, 0.4); }
