@@ -5,6 +5,9 @@ from pathlib import Path
 import numpy as np
 import traceback
 import pickle
+import secrets
+import string
+import time  # Ajouté pour mesurer le temps
 
 # --- GESTION DES DÉPENDANCES LOURDES ---
 try:
@@ -14,7 +17,7 @@ try:
     HAS_TF = True
 except ImportError:
     HAS_TF = False
-    print("⚠️ TensorFlow non trouvé. Les modèles Deep Learning (CNN, LSTM) seront indisponibles.")
+    print("⚠️ TensorFlow non trouvé.")
 
 try:
     import xgboost
@@ -33,9 +36,9 @@ DL_DATA_DIR = BASE_DIR / "datasets" / "deep_learning_data"
 DICT_DIR = BASE_DIR / "datasets" / "Dictionnaries" / "processed"
 
 # --- VARIABLES GLOBALES ---
-loaded_ml_models = {}  # RF, XGB, LOG
-loaded_dl_models = {}  # CNN, LSTM, DNN
-meta_model = None  # Le Juge Hybride
+loaded_ml_models = {}
+loaded_dl_models = {}
+meta_model = None
 tokenizer = None
 dl_config = None
 dictionaries = None
@@ -44,13 +47,8 @@ dictionaries = None
 def load_resources():
     global loaded_ml_models, loaded_dl_models, meta_model, tokenizer, dl_config, dictionaries
 
-    # 1. Chargement ML (Sklearn/XGB)
-    # On gère les noms de fichiers spécifiques
-    ml_map = {
-        "rf": "random_forest.pkl",
-        "xgb": "xgboost.pkl",
-        "log": "logistic_regression.pkl"
-    }
+    # ML
+    ml_map = {"rf": "random_forest.pkl", "xgb": "xgboost.pkl", "log": "logistic_regression.pkl"}
     print("--- Chargement ML ---")
     for key, fname in ml_map.items():
         if (MODEL_DIR / fname).exists():
@@ -60,7 +58,7 @@ def load_resources():
             except:
                 print(f"❌ Erreur {fname}")
 
-    # 2. Chargement Hybride (Meta-Modèle)
+    # Hybride
     if (MODEL_DIR / "hybrid_meta.pkl").exists():
         try:
             meta_model = joblib.load(MODEL_DIR / "hybrid_meta.pkl")
@@ -68,14 +66,10 @@ def load_resources():
         except:
             print("❌ Erreur Hybride")
 
-    # 3. Chargement DL (Keras)
+    # DL
     if HAS_TF:
         print("--- Chargement DL ---")
-        dl_files = {
-            "cnn": "cnn_scanner.keras",
-            "lstm": "lstm_reader.keras",
-            "dnn": "dnn_simple.keras"
-        }
+        dl_files = {"cnn": "cnn_scanner.keras", "lstm": "lstm_reader.keras", "dnn": "dnn_simple.keras"}
         for key, fname in dl_files.items():
             if (MODEL_DIR / fname).exists():
                 try:
@@ -84,17 +78,16 @@ def load_resources():
                 except:
                     print(f"❌ Erreur chargement {fname}")
 
-        # Tokenizer
         try:
             with open(DL_DATA_DIR / "tokenizer.pickle", "rb") as f:
                 tokenizer = pickle.load(f)
             with open(DL_DATA_DIR / "config.pickle", "rb") as f:
                 dl_config = pickle.load(f)
-            print(f"✅ Tokenizer chargé (Max Len: {dl_config['max_len']})")
+            print(f"✅ Tokenizer chargé.")
         except:
             print("⚠️ Tokenizer introuvable.")
 
-    # 4. Chargement Dictionnaire
+    # Dico
     try:
         corpus = pd.read_csv(DICT_DIR / "linguistic_dictionary.csv")
         corpus['token'] = corpus['token'].astype(str).str.lower().str.strip()
@@ -104,12 +97,11 @@ def load_resources():
             'places': set(corpus[corpus['category'] == 'place']['token']),
             'weak': set(corpus[corpus['category'] == 'weak_pwd']['token'])
         }
-        print(f"✅ Dictionnaire chargé : {len(corpus)} entrées.")
+        print(f"✅ Dictionnaire chargé.")
     except:
         dictionaries = None
 
 
-# Chargement au démarrage
 load_resources()
 
 
@@ -122,12 +114,10 @@ def get_linguistic_features(password):
     clean_pwd = re.sub(r'[^a-z]', '', pwd_lower)
     clean_rev = clean_pwd[::-1]
 
-    # Leak check
     if pwd_lower in dictionaries['weak'] or pwd_lower[::-1] in dictionaries['weak']:
         features['is_weak_exact'] = 1
 
     if len(clean_pwd) >= 4:
-        # Endroit
         if clean_pwd in dictionaries['words'] or clean_pwd in dictionaries['weak']:
             features['has_word'] = 1
         elif clean_pwd in dictionaries['names']:
@@ -135,7 +125,6 @@ def get_linguistic_features(password):
         elif clean_pwd in dictionaries['places']:
             features['has_place'] = 1
 
-        # Envers
         if clean_rev in dictionaries['words'] or clean_rev in dictionaries['weak']:
             features['has_word'] = 1
         elif clean_rev in dictionaries['names']:
@@ -159,35 +148,27 @@ def prepare_dl_input(password):
     return pad_sequences(seq, maxlen=dl_config['max_len'], padding='post', truncating='post')
 
 
-# --- FONCTION PRINCIPALE ---
+# --- FONCTION D'ANALYSE ---
 
 def analyse_password(password: str, model_type: str = "rf"):
-    # 1. Calculs
     entropy = compute_entropy(password)
     length_norm = compute_length_norm(password)
     diversity = compute_diversity(password)
     linguistic = get_linguistic_features(password)
     crack_time = calculate_bruteforce_time(password)
 
-    # 2. Prépa ML (Features)
     features_df = pd.DataFrame([{
         'length_norm': length_norm, 'diversity': diversity, 'entropy': entropy,
         'is_weak_exact': linguistic['is_weak_exact'], 'has_word': linguistic['has_word'],
         'has_name': linguistic['has_name'], 'has_place': linguistic['has_place']
     }])
-    # Ordre strict
     features_df = features_df[
         ['length_norm', 'diversity', 'entropy', 'is_weak_exact', 'has_word', 'has_name', 'has_place']]
 
     ai_prob = 0.0
 
-    # --- LOGIQUE DE PRÉDICTION ---
-
-    # CAS 1 : MODE HYBRIDE (Tous les modèles votent)
     if model_type == 'hybrid':
-        # On collecte les votes de tout le monde
         votes = {}
-
         # ML
         for m in ['rf', 'xgb', 'log']:
             votes[m] = 0.0
@@ -196,7 +177,6 @@ def analyse_password(password: str, model_type: str = "rf"):
                     votes[m] = float(loaded_ml_models[m].predict_proba(features_df)[0][1])
                 except:
                     pass
-
         # DL
         dl_in = prepare_dl_input(password)
         for m in ['cnn', 'lstm', 'dnn']:
@@ -206,21 +186,18 @@ def analyse_password(password: str, model_type: str = "rf"):
                     votes[m] = float(loaded_dl_models[m].predict(dl_in, verbose=0)[0][0])
                 except:
                     pass
-
-        # Le Juge (Meta-Model) décide
+        # Juge
         if meta_model:
-            # Ordre des colonnes CRITIQUE (doit matcher train_hybrid.py)
             vote_df = pd.DataFrame(
                 [[votes['rf'], votes['xgb'], votes['log'], votes['cnn'], votes['lstm'], votes['dnn']]],
                 columns=['rf', 'xgb', 'log', 'cnn', 'lstm', 'dnn'])
             try:
                 ai_prob = float(meta_model.predict_proba(vote_df)[0][1])
             except:
-                ai_prob = votes['rf']  # Fallback sur RF si le juge plante
+                ai_prob = votes['rf']
         else:
-            ai_prob = votes['rf']  # Fallback sur RF si pas de juge
+            ai_prob = votes['rf']
 
-    # CAS 2 : Modèle Deep Learning Spécifique
     elif model_type in ['cnn', 'lstm', 'dnn']:
         if model_type in loaded_dl_models:
             dlin = prepare_dl_input(password)
@@ -229,10 +206,7 @@ def analyse_password(password: str, model_type: str = "rf"):
                     ai_prob = float(loaded_dl_models[model_type].predict(dlin, verbose=0)[0][0])
                 except:
                     pass
-
-    # CAS 3 : Modèle Machine Learning Spécifique
     else:
-        # On récupère le modèle, ou RF par défaut
         mod = loaded_ml_models.get(model_type, loaded_ml_models.get('rf'))
         if mod:
             try:
@@ -240,11 +214,9 @@ def analyse_password(password: str, model_type: str = "rf"):
             except:
                 pass
 
-    # 3. Score Final
     score_final = int(ai_prob * 100)
     is_strong = score_final > 50
 
-    # 4. Feedback
     feedback = []
     if len(password) < 8: feedback.append("Trop court")
     if diversity < 0.5: feedback.append("Manque de variété")
@@ -255,18 +227,68 @@ def analyse_password(password: str, model_type: str = "rf"):
         if linguistic['has_word']: feedback.append("Contient un mot du dictionnaire")
         if linguistic['has_place']: feedback.append("Contient un nom de lieu")
     feedback.extend(check_patterns(password))
-
     if score_final > 80 and not feedback: feedback.append("Mot de passe excellent !")
 
     return {
-        "password": password,
-        "score": score_final,
-        "is_strong": is_strong,
-        "model_used": model_type,
-        "details": {
-            "entropy_bits": int(entropy * 100),
-            "crack_time_display": crack_time,
-            "ai_probability": round(ai_prob, 4)
-        },
+        "password": password, "score": score_final, "is_strong": is_strong, "model_used": model_type,
+        "details": {"entropy_bits": int(entropy * 100), "crack_time_display": crack_time,
+                    "ai_probability": round(ai_prob, 4)},
         "feedback": feedback
     }
+
+
+# --- GÉNÉRATEUR OPTIMISÉ (AVEC LOGS) ---
+
+def generate_secure_password():
+    alphabet = string.ascii_letters + string.digits + string.punctuation
+    attempt = 0
+    print("\n--- 🎲 Début Génération 'Ultimate' ---")
+    start_time = time.time()
+
+    while True:
+        attempt += 1
+
+        # 1. Tirage
+        pwd = ''.join(secrets.choice(alphabet) for _ in range(16))
+
+        # 2. Filtres Rapides (CPU)
+        if re.search(r'(.)\1', pwd): continue  # Répétition
+        if not (any(c.islower() for c in pwd) and any(c.isupper() for c in pwd) and
+                any(c.isdigit() for c in pwd) and any(c in string.punctuation for c in pwd)):
+            continue  # Diversité
+
+        # 3. Pré-Validation par Random Forest (Ultra-Rapide)
+        # C'est l'astuce : on ne dérange l'Hybride que si le RF est déjà content (>90)
+        pre_check = analyse_password(pwd, model_type="rf")
+        if pre_check['score'] < 90:
+            # print(f"   [Essai {attempt}] Rejeté par RF (Score {pre_check['score']})")
+            continue
+
+        # 4. Validation Finale par Hybride (Lent mais précis)
+        # Si le modèle hybride est dispo, on l'utilise, sinon on garde le RF
+        model_check = 'hybrid' if meta_model else 'rf'
+
+        analysis = analyse_password(pwd, model_type=model_check)
+        score = analysis['score']
+
+        feedbacks_str = " | ".join(analysis['feedback']) if analysis['feedback'] else "None"
+
+        print(f"   [Essai {attempt}] Candidat : {pwd}... -> Juge ({model_check}): {score}/100 | "
+              f"Feedbacks: {feedbacks_str}")
+
+        has_negative_feedback = False
+        for msg in analysis['feedback']:
+            if "excellent" not in msg.lower():
+                has_negative_feedback = True
+                break
+
+        # Condition : Score excellent ET pas de reproche
+        if score >= 90 and not has_negative_feedback:
+            duration = time.time() - start_time
+            print(f"✅ TROUVÉ en {duration:.2f}s et {attempt} essais !")
+            return pwd
+
+        # Sécurité
+        if attempt > 200:
+            print("⚠️ Trop d'essais, on relâche les critères.")
+            return pwd

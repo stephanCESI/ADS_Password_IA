@@ -1,13 +1,13 @@
-/* version enregistrée + fix département */
 document.addEventListener('DOMContentLoaded', () => {
 
     // ============================================================
     // 1. VARIABLES & ÉLÉMENTS DU DOM
     // ============================================================
+    // Navigation
     const navButtons = document.querySelectorAll('.nav-btn');
     const tabContents = document.querySelectorAll('.tab-content');
 
-    // Home
+    // Home / Solo
     const input = document.getElementById('passwordInput');
     const btn = document.getElementById('sendBtn');
     const wrapper = document.getElementById('homeInputWrapper');
@@ -26,7 +26,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const pZipBirth = document.getElementById('target-zip-birth');
     const pZipHome = document.getElementById('target-zip-home');
 
-    // Sélecteur
+    // Générateur
+    const btnGen = document.getElementById('btn-generate');
+    const btnAnalyzeGen = document.getElementById('btn-analyze-gen');
+    const displayGen = document.getElementById('gen-password-display');
+    const resultGen = document.getElementById('gen-result');
+    const btnCopy = document.getElementById('copy-btn');
+    let generatedPasswordCache = "";
+
+    // Sélecteur de Modèle
     const modelSelect = document.getElementById('modelSelect');
     const displaySpan = document.getElementById('selectedModelText');
 
@@ -42,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastPassword = "";
 
     // ============================================================
-    // 2. GESTION DE LA NAVIGATION
+    // 2. GESTION DE LA NAVIGATION (ONGLETS)
     // ============================================================
     navButtons.forEach(btnTab => {
         btnTab.addEventListener('click', () => {
@@ -50,7 +58,9 @@ document.addEventListener('DOMContentLoaded', () => {
             btnTab.classList.add('active');
             tabContents.forEach(content => content.classList.add('hidden'));
             const targetId = 'tab-' + btnTab.dataset.tab;
-            if(document.getElementById(targetId)) document.getElementById(targetId).classList.remove('hidden');
+            if(document.getElementById(targetId)) {
+                document.getElementById(targetId).classList.remove('hidden');
+            }
         });
     });
 
@@ -60,22 +70,34 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateModelDisplay() {
         if (modelSelect && displaySpan) {
             const selectedOption = modelSelect.options[modelSelect.selectedIndex];
-            if (selectedOption) displaySpan.textContent = selectedOption.text.split('(')[0].trim();
+            if (selectedOption) {
+                displaySpan.textContent = selectedOption.text.split('(')[0].trim();
+            }
         }
     }
+
     if (modelSelect) {
         updateModelDisplay();
         modelSelect.addEventListener('change', () => {
             updateModelDisplay();
+
+            // 1. Mise à jour Home
             if (lastPassword && !document.getElementById('tab-home').classList.contains('hidden')) {
                 runHomeAnalysis(lastPassword);
+            }
+
+            // 2. Mise à jour Générateur
+            if (generatedPasswordCache && !document.getElementById('tab-generator').classList.contains('hidden') && !resultGen.classList.contains('hidden')) {
+                runGenAnalysis();
             }
         });
     }
 
     // ============================================================
-    // 4. API & ANALYSE
+    // 4. API & FONCTIONS D'ANALYSE
     // ============================================================
+
+    // Appel Serveur pur
     async function fetchAnalysis(password, model) {
         try {
             const response = await fetch("http://127.0.0.1:8000/test-password", {
@@ -83,13 +105,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': "application/json" },
                 body: JSON.stringify({ password: password, model_type: model })
             });
-            return await response.json();
+            // Récupération et LOG du JSON
+            const data = await response.json();
+            console.log("🔍 Résultat API (JSON) :", data);
+            return data;
         } catch (err) {
             console.error('Erreur API:', err);
             return null;
         }
     }
 
+    // --- ANALYSE HOME ---
     async function runHomeAnalysis(password) {
         const selectedModel = modelSelect ? modelSelect.value : 'rf';
         if (resultSolo) {
@@ -98,6 +124,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const data = await fetchAnalysis(password, selectedModel);
         if (resultSolo && data) renderCard(resultSolo, data);
+    }
+
+    // --- ANALYSE GÉNÉRATEUR ---
+    async function runGenAnalysis() {
+        const model = modelSelect ? modelSelect.value : 'rf';
+        if (resultGen) {
+            resultGen.classList.remove('hidden');
+            resultGen.innerHTML = '<div class="text-center text-muted">Vérification par le Juge...</div>';
+        }
+        const data = await fetchAnalysis(generatedPasswordCache, model);
+        if (resultGen && data) renderCard(resultGen, data);
     }
 
     // ============================================================
@@ -122,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ============================================================
-    // 6. LOGIQUE ONGLET "TARGETED ATTACK" (FINAL)
+    // 6. LOGIQUE ONGLET "TARGETED ATTACK"
     // ============================================================
     if (targetInput && targetBtn) {
         targetInput.addEventListener('input', () => {
@@ -151,11 +188,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!data) { targetResult.innerHTML = "Erreur API"; return; }
 
-            // --- VÉRIFICATION DU PROFIL ---
-            // 2. VÉRIFICATION DU PROFIL AMÉLIORÉE
+            // Vérification Profil
             let compromised = [];
-
-            // On nettoie les entrées
             const checkList = [
                 { val: pFirst.value.trim(), name: "Prénom" },
                 { val: pLast.value.trim(), name: "Nom" },
@@ -165,32 +199,14 @@ document.addEventListener('DOMContentLoaded', () => {
             ];
 
             checkList.forEach(item => {
-                const val = item.val;
-                // On ignore les champs vides ou trop courts (moins de 2 lettres)
-                if (val && val.length >= 2) {
-                    const valLower = val.toLowerCase();
+                if (item.val && item.val.length >= 2) {
+                    const valLower = item.val.toLowerCase();
                     const pwdLower = pwd.toLowerCase();
-
-                    // CAS 1 : Correspondance Exacte (ex: "Kevin" dans "SuperKevin")
                     if (pwdLower.includes(valLower)) {
                         compromised.push(item.name + " (" + item.val + ")");
                     }
-
-                    // CAS 2 : Détection de Surnom / Diminutif (NOUVEAU)
-                    // Si le mot fait au moins 5 lettres (ex: "Kevin", "Thomas", "Nicolas")
-                    // On vérifie si les 3 premières lettres sont utilisées (ex: "Kev", "Tom", "Nic")
-                    else if (val.length >= 5) {
-                        const nickname = valLower.substring(0, 3); // On prend les 3 premiers
-                        if (pwdLower.includes(nickname)) {
-                            // On vérifie que ce n'est pas un faux positif trop court
-                            compromised.push(`Surnom dérivé de ${item.name} (${nickname}...)`);
-                        }
-                    }
-
-                    // CAS 3 : Gestion Spéciale Code Postal (Département)
                     if (item.name.startsWith("CP")) {
-                        const dept = val.substring(0, 2); // Les 2 premiers chiffres
-                        // Si détecté ET que ce n'est pas déjà détecté par la correspondance exacte
+                        const dept = item.val.substring(0, 2);
                         if (pwd.includes(dept) && !pwdLower.includes(valLower)) {
                             const deptName = item.name.replace("CP ", "");
                             compromised.push(`Département ${deptName} (${dept})`);
@@ -199,7 +215,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // Vérification Dates
             if (pDate.value) {
                 const dateObj = new Date(pDate.value);
                 const year = dateObj.getFullYear().toString();
@@ -212,7 +227,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (pwd.includes(day + month)) compromised.push(`Anniversaire (${day}${month})`);
             }
 
-            // --- RESULTAT ---
             if (compromised.length > 0) {
                 data.score = 0; data.is_strong = false;
                 const alertMsg = `<b>🚨 DANGER CRITIQUE :</b> Ingénierie Sociale détectée !<br>Éléments trouvés : ${compromised.join(", ")}.`;
@@ -223,7 +237,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ============================================================
-    // 7. FONCTION D'AFFICHAGE (RENDERER)
+    // 7. LOGIQUE ONGLET GÉNÉRATEUR
+    // ============================================================
+    if (btnGen) {
+        btnGen.addEventListener('click', async () => {
+            displayGen.style.color = "#aaa";
+            displayGen.innerText = "Génération...";
+            resultGen.classList.add('hidden');
+            btnAnalyzeGen.classList.add('hidden');
+
+            try {
+                const response = await fetch("http://127.0.0.1:8000/generate-password");
+                const data = await response.json();
+
+                generatedPasswordCache = data.generated_password;
+                displayGen.innerText = generatedPasswordCache;
+                displayGen.style.color = "#fff";
+
+                btnAnalyzeGen.classList.remove('hidden');
+
+            } catch (e) {
+                displayGen.innerText = "Erreur Serveur";
+            }
+        });
+
+        btnAnalyzeGen.addEventListener('click', runGenAnalysis);
+
+        btnCopy.addEventListener('click', () => {
+            if(generatedPasswordCache) {
+                navigator.clipboard.writeText(generatedPasswordCache);
+                const original = btnCopy.innerHTML;
+                btnCopy.innerHTML = '<i class="fa-solid fa-check" style="color:#00e676"></i>';
+                setTimeout(() => btnCopy.innerHTML = original, 1500);
+            }
+        });
+    }
+
+    // ============================================================
+    // 8. FONCTION D'AFFICHAGE (RENDERER)
     // ============================================================
     function renderCard(container, data, isMini = false, isHacked = false) {
         let statusText = "VULNÉRABLE", statusColor = "#ff4d4d";
@@ -284,7 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ============================================================
-    // 8. MENU BURGER
+    // 9. MENU BURGER
     // ============================================================
     if (burgerBtn) burgerBtn.addEventListener('click', () => { sideMenu.classList.add('open'); });
     if (closeMenuBtn) closeMenuBtn.addEventListener('click', () => { sideMenu.classList.remove('open'); });

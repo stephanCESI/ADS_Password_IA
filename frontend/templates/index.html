@@ -14,11 +14,10 @@
 <body>
     <nav class="custom-navbar">
         <button class="nav-btn active" data-tab="home">Home</button>
+        <button class="nav-btn" data-tab="generator">Générateur</button>
         <button class="nav-btn" data-tab="duel-pwd">Duel de mots de passe</button>
         <button class="nav-btn" data-tab="duel-model">Duel de modèles</button>
-        <button class="nav-btn danger-tab" data-tab="targeted">
-            <i class="fa-solid fa-user-secret"></i> Ciblée
-        </button>
+        <button class="nav-btn danger-tab" data-tab="targeted">Attaque ciblée</button>
     </nav>
 
     <!-- 1. BOUTON BURGER -->
@@ -70,7 +69,7 @@
                 <option value="dnn">DNN</option>
             </optgroup>
             <optgroup label="Machine Learning">
-                <option value="rf" selected>Random Forest</option>
+                <option value="rf">Random Forest</option>
                 <option value="xgb">XGBoost</option>
                 <option value="log">Régression Logistique</option>
             </optgroup>
@@ -85,6 +84,33 @@
                 <button id="sendBtn" class="circle-btn">➤</button>
             </div>
             <div id="resultSolo" class="result-card hidden"></div>
+        </div>
+    </div>
+
+    <div id="tab-generator" class="tab-content hidden">
+        <div class="d-flex flex-column justify-content-center align-items-center min-vh-100">
+
+
+
+            <!-- Zone d'affichage du mot de passe -->
+            <div class="generator-display-box mb-4">
+                <span id="gen-password-display">Cliquez sur Générer...</span>
+                <button id="copy-btn" class="copy-icon" title="Copier"><i class="fa-regular fa-copy"></i></button>
+            </div>
+
+            <!-- Boutons d'action -->
+            <div class="d-flex gap-3 mb-5">
+                <button id="btn-generate" class="btn-action" style="background: linear-gradient(135deg, #00b09b, #96c93d);">
+                    <i class="fa-solid fa-rotate"></i> GÉNÉRER
+                </button>
+                <button id="btn-analyze-gen" class="btn-action hidden"> <!-- Caché au début -->
+                    <i class="fa-solid fa-magnifying-glass-chart"></i> ANALYSER
+                </button>
+            </div>
+
+            <!-- Résultat de l'analyse -->
+            <div id="gen-result" class="result-card hidden"></div>
+
         </div>
     </div>
 

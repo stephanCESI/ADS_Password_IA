@@ -313,3 +313,42 @@ body {
     top: 100px; left: 50%; transform: translateX(-50%);
     margin: 0; width: 60%;
 }
+
+/* --- STYLE GÉNÉRATEUR --- */
+.generator-display-box {
+    background: rgba(0, 0, 0, 0.4);
+    border: 2px solid rgba(0, 230, 118, 0.3); /* Vert Matrix */
+    border-radius: 15px;
+    padding: 20px 40px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 2rem;
+    color: #fff;
+    letter-spacing: 2px;
+    position: relative;
+    min-width: 300px;
+    text-align: center;
+    box-shadow: 0 0 20px rgba(0, 230, 118, 0.1);
+    transition: all 0.3s ease;
+}
+
+.generator-display-box:hover {
+    border-color: #00e676;
+    box-shadow: 0 0 30px rgba(0, 230, 118, 0.2);
+}
+
+.copy-icon {
+    position: absolute;
+    top: 50%;
+    right: 15px;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.copy-icon:hover { color: #fff; }
+
+.text-success-custom { color: #00e676; }
