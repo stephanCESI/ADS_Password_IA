@@ -628,3 +628,35 @@ body {
     border: none;
     box-shadow: none;
 }
+
+/* --- DUEL IA SPECIFICS --- */
+
+/* Style des selects dans les cartes */
+.settings-select {
+    background-color: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #e0d9f3;
+    border-radius: 10px;
+    padding: 10px;
+    cursor: pointer;
+}
+
+.settings-select:focus {
+    background-color: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    border-color: #00e676;
+    box-shadow: none;
+}
+
+/* Variante Bleue pour le bouton VS */
+.vs-btn.blue-vs {
+    background: linear-gradient(135deg, #4facfe, #00f2fe);
+    box-shadow: 0 0 20px rgba(0, 242, 254, 0.5);
+}
+.vs-btn.blue-vs:hover {
+    box-shadow: 0 0 30px rgba(0, 242, 254, 0.8);
+    transform: scale(1.15) rotate(-10deg);
+}
+
+/* Icônes Bootstrap colorées */
+.text-info { color: #0dcaf0 !important; }
