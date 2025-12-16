@@ -1,141 +1,183 @@
+import pandas as pd
 import numpy as np
-import pickle
+import joblib
+import re
 from pathlib import Path
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Embedding, GlobalAveragePooling1D, Conv1D, GlobalMaxPooling1D, LSTM, Dropout
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
 
-# --- CONFIGURATION ---
+# Gestion de XGBoost (si pas installé, on ne l'utilise pas)
+try:
+    from xgboost import XGBClassifier
+
+    HAS_XGB = True
+except ImportError:
+    HAS_XGB = False
+    print("⚠️ XGBoost n'est pas installé (pip install xgboost). Ce modèle sera ignoré.")
+
+# --- IMPORTS UTILES ---
+from backend.app.utils.math_features import compute_length_norm, compute_diversity, compute_entropy
+
+# --- CONFIGURATION DES CHEMINS ---
 BASE_DIR = Path(__file__).resolve().parents[3]
-DL_DATA_DIR = BASE_DIR / "datasets" / "deep_learning_data"
+DATA_DIR = BASE_DIR / "datasets"
+PROCESSED_DIR = DATA_DIR / "processed"
+DICT_DIR = BASE_DIR / "datasets" / "Dictionnaries" / "processed"
 MODEL_DIR = BASE_DIR / "backend" / "app" / "models"
+
+# Création du dossier pour sauvegarder les modèles
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
-# Paramètres d'entraînement
-BATCH_SIZE = 64
-EPOCHS = 10  # On peut augmenter si besoin, mais 10 c'est souvent suffisant pour ce problème
+# --- TABLE TRADUCTION LEET ---
+LEET_TRANS = str.maketrans({
+    '4': 'a', '@': 'a',
+    '3': 'e',
+    '1': 'i', '!': 'i',
+    '0': 'o',
+    '5': 's', '$': 's',
+    '7': 't', '+': 't'
+})
 
 
-def load_data():
-    print("⏳ Chargement des données pré-traitées...")
+def load_dictionaries():
+    """Charge les dictionnaires en mémoire (Sets)"""
+    print("Chargement du dictionnaire linguistique...")
     try:
-        X_train = np.load(DL_DATA_DIR / "X_train.npy")
-        y_train = np.load(DL_DATA_DIR / "y_train.npy")
-        X_val = np.load(DL_DATA_DIR / "X_val.npy")
-        y_val = np.load(DL_DATA_DIR / "y_val.npy")
-        X_test = np.load(DL_DATA_DIR / "X_test.npy")
-        y_test = np.load(DL_DATA_DIR / "y_test.npy")
+        corpus = pd.read_csv(DICT_DIR / "linguistic_dictionary.csv")
+        corpus['token'] = corpus['token'].astype(str).str.lower().str.strip()
 
-        # Chargement de la config pour connaître la taille du vocabulaire
-        with open(DL_DATA_DIR / "config.pickle", "rb") as f:
-            config = pickle.load(f)
+        words_set = set(corpus[corpus['category'] == 'word']['token'])
+        names_set = set(corpus[corpus['category'] == 'name']['token'])
+        places_set = set(corpus[corpus['category'] == 'place']['token'])
+        weak_set = set(corpus[corpus['category'] == 'weak_pwd']['token'])
 
-        print(f"✅ Données chargées. Train: {X_train.shape}, Vocab: {config['vocab_size']}")
-        return X_train, y_train, X_val, y_val, X_test, y_test, config
+        print(f"-> Dictionnaires chargés : {len(corpus)} entrées.")
+        return words_set, names_set, places_set, weak_set
     except FileNotFoundError:
-        print("❌ Erreur : Fichiers .npy introuvables. Lance dl_data_loader.py d'abord.")
+        print("ERREUR CRITIQUE : Dictionnaire introuvable.")
         exit()
 
 
-# --- DÉFINITION DES MODÈLES ---
+def calculate_linguistic_features(password, dicts):
+    """Calcule les features linguistiques à la volée (incluant Leet Speak)"""
+    words_set, names_set, places_set, weak_set = dicts
 
-def build_dnn(vocab_size, max_len):
-    """Modèle Simple : Embedding + Moyenne + Dense"""
-    model = Sequential([
-        Embedding(vocab_size, 16, input_length=max_len),  # Transforme chaque caractère en vecteur de 16 chiffres
-        GlobalAveragePooling1D(),  # Fait la moyenne pour avoir une idée globale
-        Dense(24, activation='relu'),
-        Dropout(0.2),  # Évite le par-cœur
-        Dense(1, activation='sigmoid')  # Sortie 0 ou 1
-    ], name="DNN_Simple")
-    return model
+    pwd_str = str(password).lower()
 
+    # 1. Nettoyage Standard
+    clean_pwd = re.sub(r'[^a-z]', '', pwd_str)
 
-def build_cnn(vocab_size, max_len):
-    """Modèle CNN : Scanner de motifs (n-grams)"""
-    model = Sequential([
-        Embedding(vocab_size, 32, input_length=max_len),
-        # Conv1D scanne des groupes de 3 caractères (kernel_size=3)
-        Conv1D(64, 3, activation='relu'),
-        GlobalMaxPooling1D(),  # Garde le motif le plus fort détecté
-        Dense(24, activation='relu'),
-        Dropout(0.2),
-        Dense(1, activation='sigmoid')
-    ], name="CNN_Scanner")
-    return model
+    # 2. Nettoyage Leet (Traduction)
+    unleeted_pwd = pwd_str.translate(LEET_TRANS)
+    clean_unleeted = re.sub(r'[^a-z]', '', unleeted_pwd)
 
+    features = {
+        'is_weak_exact': 0,
+        'has_word': 0,
+        'has_name': 0,
+        'has_place': 0,
+        'has_leetspeak': 0
+    }
 
-def build_lstm(vocab_size, max_len):
-    """Modèle LSTM : Lecture séquentielle (Plus lent mais précis sur les suites)"""
-    model = Sequential([
-        Embedding(vocab_size, 32, input_length=max_len),
-        # LSTM lit la séquence et garde une mémoire
-        LSTM(32),
-        Dense(24, activation='relu'),
-        Dropout(0.2),
-        Dense(1, activation='sigmoid')
-    ], name="LSTM_Reader")
-    return model
+    # 1. Check Leak Exact
+    if pwd_str in weak_set:
+        features['is_weak_exact'] = 1
 
+    # Fonction locale de vérification
+    def check_in_dicts(text):
+        if len(text) < 4: return False
+        found = False
+        if text in words_set or text in weak_set:
+            features['has_word'] = 1
+            found = True
+        elif text in names_set:
+            features['has_name'] = 1
+            found = True
+        elif text in places_set:
+            features['has_place'] = 1
+            found = True
+        return found
 
-def train_and_evaluate(model, data):
-    X_train, y_train, X_val, y_val, X_test, y_test, _ = data
+    # 2. Check Normal
+    check_in_dicts(clean_pwd)
 
-    print(f"\n⚡ Entraînement du modèle : {model.name}...")
+    # 3. Check Leet Speak
+    # Si le mot traduit est trouvé ALORS QUE l'original était différent (donc contenait des symboles/chiffres)
+    if clean_unleeted != clean_pwd:
+        if check_in_dicts(clean_unleeted):
+            features['has_leetspeak'] = 1
 
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-
-    # Arrêt automatique si l'entraînement ne progresse plus (évite de perdre du temps)
-    early_stop = EarlyStopping(monitor='val_loss', patience=2, restore_best_weights=True)
-
-    history = model.fit(
-        X_train, y_train,
-        validation_data=(X_val, y_val),
-        epochs=EPOCHS,
-        batch_size=BATCH_SIZE,
-        callbacks=[early_stop],
-        verbose=1
-    )
-
-    print(f"📊 Évaluation sur le Test Set ({model.name})...")
-    loss, accuracy = model.evaluate(X_test, y_test, verbose=0)
-    print(f"   ✅ Accuracy Finale : {accuracy:.4f} ({accuracy * 100:.2f}%)")
-
-    # Sauvegarde au format Keras moderne (.keras)
-    save_path = MODEL_DIR / f"{model.name.lower()}.keras"
-    model.save(save_path)
-    print(f"   💾 Modèle sauvegardé : {save_path}")
-
-    return accuracy
+    return pd.Series(features)
 
 
-def main():
-    # 1. Charger les données
-    data = load_data()
-    X_train, _, _, _, _, _, config = data
-    vocab_size = config['vocab_size']
-    max_len = config['max_len']
+def train():
+    print("--- 🚀 DÉBUT DE L'ENTRAÎNEMENT MULTI-MODÈLES ---")
 
-    results = {}
+    # 1. Chargement des données
+    df = pd.read_csv(PROCESSED_DIR / "passwords_processed.csv")
+    print(f"Dataset chargé : {len(df)} lignes")
 
-    # 2. Entraîner les 3 champions
-    # Modèle 1 : DNN (Rapide, Baseline)
-    model_dnn = build_dnn(vocab_size, max_len)
-    results['DNN'] = train_and_evaluate(model_dnn, data)
+    # 2. Préparation des features
+    dicts = load_dictionaries()
+    print("Calcul des features linguistiques en cours...")
+    linguistic_df = df['password'].apply(lambda x: calculate_linguistic_features(x, dicts))
 
-    # Modèle 2 : CNN (Excellent pour les patterns)
-    model_cnn = build_cnn(vocab_size, max_len)
-    results['CNN'] = train_and_evaluate(model_cnn, data)
+    # Fusion (Maths + Linguistique)
+    X = pd.concat([df[['length_norm', 'diversity', 'entropy']], linguistic_df], axis=1)
+    y = df['label']
 
-    # Modèle 3 : LSTM (Puissant pour la logique)
-    model_lstm = build_lstm(vocab_size, max_len)
-    results['LSTM'] = train_and_evaluate(model_lstm, data)
+    # Vérification des colonnes
+    print(f"Colonnes utilisées pour l'entraînement : {list(X.columns)}")
 
-    print("\n--- 🏆 PODIUM DEEP LEARNING ---")
-    for name, acc in sorted(results.items(), key=lambda x: x[1], reverse=True):
-        print(f"{name}: {acc:.4f}")
+    # 3. Split Train/Test
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # 4. Liste des modèles à générer
+    models_config = [
+        {
+            "name": "RandomForest",
+            "file": "random_forest.pkl",
+            "clf": RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
+        },
+        {
+            "name": "LogisticRegression",
+            "file": "logistic_regression.pkl",
+            # max_iter élevé pour être sûr que ça converge
+            "clf": LogisticRegression(max_iter=1000, random_state=42)
+        }
+    ]
+
+    # Ajout de XGBoost si disponible
+    if HAS_XGB:
+        models_config.append({
+            "name": "XGBoost",
+            "file": "xgboost.pkl",
+            "clf": XGBClassifier(eval_metric='logloss', random_state=42)
+        })
+
+    # 5. Boucle d'entraînement
+    print(f"\nPréparation de {len(models_config)} modèles...")
+
+    for m in models_config:
+        print(f"\n⚡ Entraînement de : {m['name']}...")
+        clf = m['clf']
+
+        # Entraînement
+        clf.fit(X_train, y_train)
+
+        # Vérification rapide
+        acc = accuracy_score(y_test, clf.predict(X_test))
+        print(f"   ✅ Précision : {acc:.4f}")
+
+        # Sauvegarde
+        save_path = MODEL_DIR / m['file']
+        joblib.dump(clf, save_path)
+        print(f"   💾 Sauvegardé dans : {save_path}")
+
+    print("\n--- TERMINE ! Tes 3 cerveaux sont prêts dans backend/app/models/ ---")
 
 
 if __name__ == "__main__":
-    main()
+    train()

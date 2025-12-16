@@ -644,7 +644,7 @@ body {
 .settings-select:focus {
     background-color: rgba(0, 0, 0, 0.5);
     color: #fff;
-    border-color: #00e676;
+    border-color: #e0d9f3;
     box-shadow: none;
 }
 

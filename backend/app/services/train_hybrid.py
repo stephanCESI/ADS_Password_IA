@@ -22,6 +22,16 @@ MODEL_DIR = BASE_DIR / "backend" / "app" / "models"
 DL_DATA_DIR = BASE_DIR / "datasets" / "deep_learning_data"
 DICT_DIR = BASE_DIR / "datasets" / "Dictionnaries" / "processed"
 
+# --- TABLE DE TRADUCTION LEET SPEAK ---
+LEET_TRANS = str.maketrans({
+    '4': 'a', '@': 'a',
+    '3': 'e',
+    '1': 'i', '!': 'i',
+    '0': 'o',
+    '5': 's', '$': 's',
+    '7': 't', '+': 't'
+})
+
 
 def load_base_models():
     print("⏳ Chargement des 6 experts...")
@@ -37,7 +47,7 @@ def load_base_models():
     except:
         print("⚠️ XGB manquant")
     try:
-        models['log'] = joblib.load(MODEL_DIR / "logistic_regression.pkl")  # AJOUTÉ
+        models['log'] = joblib.load(MODEL_DIR / "logistic_regression.pkl")
     except:
         print("⚠️ LOG manquant")
 
@@ -51,7 +61,7 @@ def load_base_models():
     except:
         print("⚠️ LSTM manquant")
     try:
-        models['dnn'] = tf.keras.models.load_model(MODEL_DIR / "dnn_simple.keras")  # AJOUTÉ
+        models['dnn'] = tf.keras.models.load_model(MODEL_DIR / "dnn_simple.keras")
     except:
         print("⚠️ DNN manquant")
 
@@ -65,7 +75,7 @@ def load_base_models():
 
 
 def get_ml_features(df):
-    """Recalcule les features pour le ML (RF/XGB/LOG)"""
+    """Recalcule les features pour le ML (RF/XGB/LOG) - VERSION COMPLÈTE"""
     try:
         corpus = pd.read_csv(DICT_DIR / "linguistic_dictionary.csv")
         corpus['token'] = corpus['token'].astype(str).str.lower().str.strip()
@@ -79,21 +89,50 @@ def get_ml_features(df):
 
     def calc_ling(pwd):
         p = str(pwd).lower()
+
+        # 1. Nettoyage Standard
         cl = re.sub(r'[^a-z]', '', p)
-        f = [0, 0, 0, 0]  # weak, word, name, place
-        if p in weak: f[0] = 1
-        if len(cl) >= 4:
-            if cl in words or cl in weak:
-                f[1] = 1
-            elif cl in names:
-                f[2] = 1
-            elif cl in places:
-                f[3] = 1
+        # 2. Nettoyage Inversé
+        cl_rev = cl[::-1]
+        # 3. Nettoyage Leet
+        unleeted_pwd = p.translate(LEET_TRANS)
+        cl_unleeted = re.sub(r'[^a-z]', '', unleeted_pwd)
+
+        f = [0, 0, 0, 0, 0]  # is_weak, has_word, has_name, has_place, has_leetspeak
+
+        # Check Leak Exact
+        if p in weak or p[::-1] in weak: f[0] = 1
+
+        def check_sets(text):
+            found = False
+            if len(text) < 4: return False
+            if text in words or text in weak:
+                f[1] = 1;
+                found = True
+            elif text in names:
+                f[2] = 1;
+                found = True
+            elif text in places:
+                f[3] = 1;
+                found = True
+            return found
+
+        # Check Normal & Inversé
+        check_sets(cl)
+        check_sets(cl_rev)
+
+        # Check Leet
+        if cl_unleeted != cl:
+            if check_sets(cl_unleeted):
+                f[4] = 1  # has_leetspeak = 1
+
         return f
 
-    print("   -> Calcul features ML...")
+    print("   -> Calcul features ML (avec Leet Speak)...")
     ling_data = df['password'].apply(calc_ling).tolist()
-    ling_df = pd.DataFrame(ling_data, columns=['is_weak_exact', 'has_word', 'has_name', 'has_place'])
+
+    # AJOUT DE 'has_leetspeak'
+    ling_df = pd.DataFrame(ling_data, columns=['is_weak_exact', 'has_word', 'has_name', 'has_place', 'has_leetspeak'])
     ling_df.index = df.index  # Alignement index critique
 
     return pd.concat([df[['length_norm', 'diversity', 'entropy']], ling_df], axis=1)
@@ -122,21 +161,22 @@ def train_hybrid():
     # 3. Prédictions
     preds = {}
 
-    # ML
+    # ML (Calcul des 8 features)
     X_ml = get_ml_features(df_test)
-    X_ml = X_ml[['length_norm', 'diversity', 'entropy', 'is_weak_exact', 'has_word', 'has_name', 'has_place']]
+    X_ml = X_ml[
+        ['length_norm', 'diversity', 'entropy', 'is_weak_exact', 'has_word', 'has_name', 'has_place', 'has_leetspeak']]
 
     if 'rf' in models: preds['rf'] = models['rf'].predict_proba(X_ml)[:, 1]
     if 'xgb' in models: preds['xgb'] = models['xgb'].predict_proba(X_ml)[:, 1]
-    if 'log' in models: preds['log'] = models['log'].predict_proba(X_ml)[:, 1]  # AJOUTÉ
+    if 'log' in models: preds['log'] = models['log'].predict_proba(X_ml)[:, 1]
 
     # DL
     X_dl = get_dl_input(passwords, tokenizer, config['max_len'])
     if 'cnn' in models: preds['cnn'] = models['cnn'].predict(X_dl, verbose=0).flatten()
     if 'lstm' in models: preds['lstm'] = models['lstm'].predict(X_dl, verbose=0).flatten()
-    if 'dnn' in models: preds['dnn'] = models['dnn'].predict(X_dl, verbose=0).flatten()  # AJOUTÉ
+    if 'dnn' in models: preds['dnn'] = models['dnn'].predict(X_dl, verbose=0).flatten()
 
-    # 4. Dataset du Juge (DataFrame avec 6 colonnes si tout va bien)
+    # 4. Dataset du Juge
     X_stack = pd.DataFrame(preds)
     print("\n📊 Aperçu des votes (5 lignes) :")
     print(X_stack.head())
@@ -152,7 +192,6 @@ def train_hybrid():
     print(f"\n🏆 PERFORMANCE HYBRIDE : {final_acc:.4f}")
 
     print("   Poids accordés aux experts :")
-    # On trie pour voir qui est le chef
     weights = list(zip(X_stack.columns, meta_model.coef_[0]))
     for name, coef in sorted(weights, key=lambda x: x[1], reverse=True):
         print(f"   - {name.upper()}: {coef:.2f}")

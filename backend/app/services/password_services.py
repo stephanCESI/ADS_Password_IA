@@ -7,7 +7,14 @@ import traceback
 import pickle
 import secrets
 import string
-import time  # Ajouté pour mesurer le temps
+import time
+
+# --- IMPORT ZXCVBN ---
+try:
+    from zxcvbn import zxcvbn
+except ImportError:
+    def zxcvbn(pwd):
+        return {'score': 0, 'crack_times_display': {'offline_slow_hashing_1e4_per_second': 'N/A'}}
 
 # --- GESTION DES DÉPENDANCES LOURDES ---
 try:
@@ -17,7 +24,7 @@ try:
     HAS_TF = True
 except ImportError:
     HAS_TF = False
-    print("⚠️ TensorFlow non trouvé.")
+    print("⚠️ TensorFlow non trouvé. Les modèles Deep Learning (CNN, LSTM) seront indisponibles.")
 
 try:
     import xgboost
@@ -42,6 +49,15 @@ meta_model = None
 tokenizer = None
 dl_config = None
 dictionaries = None
+
+LEET_TRANS = str.maketrans({
+    '4': 'a', '@': 'a',
+    '3': 'e',
+    '1': 'i', '!': 'i',
+    '0': 'o',
+    '5': 's', '$': 's',
+    '7': 't', '+': 't'
+})
 
 
 def load_resources():
@@ -108,29 +124,46 @@ load_resources()
 # --- FONCTIONS UTILITAIRES ---
 
 def get_linguistic_features(password):
-    features = {'is_weak_exact': 0, 'has_word': 0, 'has_name': 0, 'has_place': 0}
+    features = {'is_weak_exact': 0, 'has_word': 0, 'has_name': 0, 'has_place': 0, 'has_leetspeak': 0}
     if dictionaries is None: return features
+
     pwd_lower = password.lower()
+
+    # 1. Nettoyage Standard
     clean_pwd = re.sub(r'[^a-z]', '', pwd_lower)
     clean_rev = clean_pwd[::-1]
 
+    # 2. Nettoyage Leet (Traduction)
+    unleeted_pwd = pwd_lower.translate(LEET_TRANS)
+    clean_unleeted = re.sub(r'[^a-z]', '', unleeted_pwd)
+
+    # Check Leak Exact
     if pwd_lower in dictionaries['weak'] or pwd_lower[::-1] in dictionaries['weak']:
         features['is_weak_exact'] = 1
 
-    if len(clean_pwd) >= 4:
-        if clean_pwd in dictionaries['words'] or clean_pwd in dictionaries['weak']:
-            features['has_word'] = 1
-        elif clean_pwd in dictionaries['names']:
-            features['has_name'] = 1
-        elif clean_pwd in dictionaries['places']:
-            features['has_place'] = 1
+    def check_sets(text):
+        found = False
+        if len(text) < 4: return False
+        if text in dictionaries['words'] or text in dictionaries['weak']:
+            features['has_word'] = 1;
+            found = True
+        elif text in dictionaries['names']:
+            features['has_name'] = 1;
+            found = True
+        elif text in dictionaries['places']:
+            features['has_place'] = 1;
+            found = True
+        return found
 
-        if clean_rev in dictionaries['words'] or clean_rev in dictionaries['weak']:
-            features['has_word'] = 1
-        elif clean_rev in dictionaries['names']:
-            features['has_name'] = 1
-        elif clean_rev in dictionaries['places']:
-            features['has_place'] = 1
+    # Check Normal & Inversé
+    check_sets(clean_pwd)
+    check_sets(clean_rev)
+
+    # Check Leet
+    if clean_unleeted != clean_pwd:
+        if check_sets(clean_unleeted):
+            features['has_leetspeak'] = 1
+
     return features
 
 
@@ -155,15 +188,20 @@ def analyse_password(password: str, model_type: str = "rf"):
     length_norm = compute_length_norm(password)
     diversity = compute_diversity(password)
     linguistic = get_linguistic_features(password)
-    crack_time = calculate_bruteforce_time(password)
+    crack_time_maths = calculate_bruteforce_time(password)
+
+    zxcvbn_stats = zxcvbn(password)
+    zxcvbn_score = zxcvbn_stats['score']  # 0, 1, 2, 3, 4
+    zxcvbn_time = zxcvbn_stats['crack_times_display']['offline_slow_hashing_1e4_per_second']  # Temps estimé humain
 
     features_df = pd.DataFrame([{
         'length_norm': length_norm, 'diversity': diversity, 'entropy': entropy,
         'is_weak_exact': linguistic['is_weak_exact'], 'has_word': linguistic['has_word'],
-        'has_name': linguistic['has_name'], 'has_place': linguistic['has_place']
+        'has_name': linguistic['has_name'], 'has_place': linguistic['has_place'],
+        'has_leetspeak': linguistic['has_leetspeak']
     }])
     features_df = features_df[
-        ['length_norm', 'diversity', 'entropy', 'is_weak_exact', 'has_word', 'has_name', 'has_place']]
+        ['length_norm', 'diversity', 'entropy', 'is_weak_exact', 'has_word', 'has_name', 'has_place', 'has_leetspeak']]
 
     ai_prob = 0.0
 
@@ -226,18 +264,32 @@ def analyse_password(password: str, model_type: str = "rf"):
         if linguistic['has_name']: feedback.append("Contient un prénom/nom connu")
         if linguistic['has_word']: feedback.append("Contient un mot du dictionnaire")
         if linguistic['has_place']: feedback.append("Contient un nom de lieu")
+        if linguistic['has_leetspeak']: feedback.append("Détection Leet Speak (Mots déguisés)")
+
     feedback.extend(check_patterns(password))
+
+    if score_final < 20 and (int(entropy * 100) > 50) and not feedback:
+        feedback.append("⚠️ Structure linguistique suspecte détectée par l'IA (Pattern humain implicite)")
+
     if score_final > 80 and not feedback: feedback.append("Mot de passe excellent !")
 
     return {
-        "password": password, "score": score_final, "is_strong": is_strong, "model_used": model_type,
-        "details": {"entropy_bits": int(entropy * 100), "crack_time_display": crack_time,
-                    "ai_probability": round(ai_prob, 4)},
+        "password": password,
+        "score": score_final,
+        "is_strong": is_strong,
+        "model_used": model_type,
+        "details": {
+            "entropy_bits": int(entropy * 100),
+            "crack_time_display": crack_time_maths,  # Ton calcul maths
+            "zxcvbn_score": zxcvbn_score,  # Score Zxcvbn (0-4)
+            "zxcvbn_time": zxcvbn_time,  # Temps Zxcvbn
+            "ai_probability": round(ai_prob, 4)
+        },
         "feedback": feedback
     }
 
 
-# --- GÉNÉRATEUR OPTIMISÉ (AVEC LOGS) ---
+# --- GÉNÉRATEUR OPTIMISÉ ---
 
 def generate_secure_password():
     alphabet = string.ascii_letters + string.digits + string.punctuation
@@ -258,14 +310,11 @@ def generate_secure_password():
             continue  # Diversité
 
         # 3. Pré-Validation par Random Forest (Ultra-Rapide)
-        # C'est l'astuce : on ne dérange l'Hybride que si le RF est déjà content (>90)
         pre_check = analyse_password(pwd, model_type="rf")
         if pre_check['score'] < 90:
-            # print(f"   [Essai {attempt}] Rejeté par RF (Score {pre_check['score']})")
             continue
 
         # 4. Validation Finale par Hybride (Lent mais précis)
-        # Si le modèle hybride est dispo, on l'utilise, sinon on garde le RF
         model_check = 'hybrid' if meta_model else 'rf'
 
         analysis = analyse_password(pwd, model_type=model_check)
@@ -273,7 +322,7 @@ def generate_secure_password():
 
         feedbacks_str = " | ".join(analysis['feedback']) if analysis['feedback'] else "None"
 
-        print(f"   [Essai {attempt}] Candidat : {pwd}... -> Juge ({model_check}): {score}/100 | "
+        print(f"   [Essai {attempt}] Candidat : {pwd[:4]}... -> Juge ({model_check}): {score}/100 | "
               f"Feedbacks: {feedbacks_str}")
 
         has_negative_feedback = False
