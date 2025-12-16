@@ -561,3 +561,70 @@ body {
 
 /* Helpers couleurs */
 .text-success-custom { color: #00e676; text-shadow: 0 0 15px rgba(0, 230, 118, 0.4); }
+
+/* --- DUEL MODE --- */
+.duel-card {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 20px;
+    padding: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+/* Effet Gagnant (Vert brillant) */
+.duel-card.winner {
+    border-color: #00e676;
+    box-shadow: 0 0 40px rgba(0, 230, 118, 0.15);
+    background: rgba(0, 230, 118, 0.05);
+    transform: scale(1.03);
+    z-index: 10;
+}
+
+/* Effet Perdant (Rouge terne) */
+.duel-card.loser {
+    opacity: 0.5;
+    border-color: #ff4d4d;
+    transform: scale(0.95);
+    filter: grayscale(0.8);
+}
+
+/* Bouton VS style Arcade */
+.vs-btn {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff416c, #ff4b2b);
+    border: 4px solid #1a1a2e; /* Bordure sombre pour le détacher du fond */
+    color: #fff;
+    font-weight: 900;
+    font-size: 1.8rem;
+    font-style: italic;
+    cursor: pointer;
+    box-shadow: 0 0 20px rgba(255, 75, 43, 0.6);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.vs-btn:hover {
+    transform: scale(1.15) rotate(10deg);
+    box-shadow: 0 0 30px rgba(255, 75, 43, 0.8);
+}
+
+.vs-btn:active {
+    transform: scale(0.9);
+}
+
+/* Ajustement Cartes Mini (Résultat dans le duel) */
+.result-card.mini {
+    margin-top: 20px;
+    padding: 20px;
+    background: rgba(0,0,0,0.3);
+    border: none;
+    box-shadow: none;
+}
