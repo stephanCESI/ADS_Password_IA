@@ -1,115 +1,107 @@
-Système Intelligent d'Évaluation de Mots de Passe
+# 🛡️ Système Intelligent d'Évaluation de Mots de Passe
 
-> Application de la Démarche Scientifique (ADS) - A4 CESI Ingénieurs
+> **Projet ADS (Application de la Démarche Scientifique) — CESI École d'Ingénieurs (A4)**
+> Un système hybride combinant Machine Learning et Deep Learning pour surpasser l'entropie mathématique classique.
 
-## Contexte du Projet
+---
 
-Ce projet est réalisé dans le cadre de la 4ème année à l’école d’ingénieurs **CESI**, spécialité informatique avec orientation **cybersécurité**.
+## 🧐 Contexte & Problématique
 
-Il a été motivé par l’observation que les failles liées aux mots de passe restent une cause majeure d’intrusion dans les systèmes d’information. Malgré l’existence d’outils d’évaluation et de générateurs automatiques, de nombreux utilisateurs continuent d’adopter des mots de passe faibles. Les méthodes classiques d’évaluation (basées sur l'entropie mathématique) ne reflètent pas toujours la vulnérabilité réelle face aux techniques modernes de compromission, car elles peinent à détecter les patterns sémantiques ou structurels exploités par les attaquants.
+Ce projet est réalisé dans le cadre de la 4ème année à l'école d'ingénieurs **CESI**. Il part d'un constat critique : les méthodes classiques d'évaluation (basées uniquement sur l'entropie de Shannon) ne reflètent plus la vulnérabilité réelle face aux techniques modernes de compromission (attaques par dictionnaire hybride, règles heuristiques).
 
-## Problématique
+**Problématique :**
+* Les méthodes classiques permettent-elles réellement d'estimer la robustesse d'un mot de passe ?
+* Un modèle d'apprentissage automatique peut-il mieux prédire la "devinabilité" d'un mot de passe et permettre la création de mots de passe plus sûrs ?
 
-* Les méthodes classiques d’évaluation de mots de passe permettent-elles réellement d’estimer leur robustesse face aux attaques modernes ?
-* Un modèle d’apprentissage automatique peut-il mieux prédire la vulnérabilité d’un mot de passe et permettre la création de secrets plus sûrs que les générateurs traditionnels ?
+---
 
-## Description de la Solution
+## ✨ Architecture de la Solution
 
-L’objectif est de concevoir un **système d’évaluation intelligent** capable d’attribuer un score de robustesse (0 à 100) en combinant mathématiques et intelligence artificielle.
+Le projet repose sur une **Architecture Hybride (Stacking)**. Plutôt que de se fier à un seul algorithme, le système fait collaborer **6 modèles experts** dont les prédictions sont arbitrées par un **Juge Suprême (Méta-modèle)**.
 
-Contrairement aux validateurs classiques, Cyber Sentry AI utilise une architecture **Hybride (Stacking)** qui fait collaborer 6 modèles d'IA pour détecter trois types de faiblesses :
+### 1. Experts Machine Learning (ML)
+* **Random Forest / XGBoost / Logistic Regression :** Analysent des caractéristiques mathématiques (longueur, diversité) et linguistiques (présence dans des dictionnaires de prénoms, lieux, fuites connues).
 
-1. **Faiblesse Mathématique** (Longueur, Diversité, Entropie brute).
-2. **Faiblesse Sémantique** (Mots du dictionnaire, Prénoms, Lieux, Leaks connus).
-3. **Faiblesse Structurelle** (Suites logiques, Inversions de mots, Répétitions).
+### 2. Experts Deep Learning (DL)
+* **CNN 1D (Scanner) :** Détecte les motifs spatiaux locaux (ex: suites de touches `qwerty`, `1234`).
+* **LSTM (Reader) :** Analyse les dépendances séquentielles à long terme (compréhension de la structure sémantique humaine).
 
-Le système intègre également un comparateur de méthodes de génération et un module de simulation d'ingénierie sociale.
+### 3. Le Méta-Modèle (Juge)
+Une Régression Logistique pondère les scores de chaque expert pour délivrer une probabilité de robustesse finale sur 100.
 
-## Fonctionnalités Clés
+---
 
-* **Architecture Hybride (Stacking)** : Un "Juge Suprême" (Meta-Modèle de Régression Logistique) pondère les avis de 6 experts :
-  * Machine Learning : Random Forest, XGBoost, Logistic Regression.
-  * Deep Learning : CNN 1D (Scanner de patterns), LSTM, DNN.
-* **Détection Linguistique Avancée** : Repère les mots cachés, les prénoms, les villes et les leaks connus (basé sur le Top 100k RockYou et NCSC). Détecte également les inversions (ex: "drowssap") et le Leet Speak partiel.
-* **Mode Duel** : Une interface comparative permettant de visualiser la différence de robustesse entre deux mots de passe.
-* **Simulation d'Ingénierie Sociale** : Un module contextuel pour tester la résistance d'un mot de passe face à une attaque ciblée (Nom, Date de naissance, Code postal, Mot-clé).
-* **Générateur Quantum** : Un générateur aléatoire (CSPRNG) qui s'auto-corrige en utilisant le Juge IA pour garantir une robustesse supérieure à 95/100.
+## 🚀 Fonctionnalités Clés
 
-## Performances et Résultats
+* **Analyse Heuristique & Linguistique :** Détection du Leet Speak (`P@ssw0rd`), des inversions (`drowssap`) et recherche de substrings dans un dictionnaire de +230 000 tokens.
+* **Générateurs CSPRNG (Cryptographically Secure) :**
+    * **Mode Diceware :** Pour les Master Passwords (haute entropie, haute mémorisabilité).
+    * **Mode Apple-Style :** Pour les comptes tiers (aléatoire pur avec formatage lisible).
+* **Simulation d'Attaque Ciblée :** Module de détection d'ingénierie sociale basé sur des données OSINT (Nom, Date de naissance, Code Postal).
+* **Mode Duel :** Comparaison interactive de deux mots de passe ou de deux modèles d'IA.
 
-Sur le jeu de test (20 000 mots de passe inconnus du modèle), l'architecture Hybride surpasse les modèles individuels en combinant leurs forces :
+---
 
-| Modèle | Accuracy | Point Fort |
+## 📊 Performances Techniques
+
+L'architecture hybride atteint une précision quasi parfaite en combinant les forces de chaque approche :
+
+| Modèle | Accuracy (Test) | Point Fort |
 | :--- | :--- | :--- |
-| **Random Forest** | 98.8% | Règles strictes, Détection dictionnaire |
-| **CNN (Deep Learning)** | 99.7% | Détection de patterns subtils (prononçabilité) |
-| **Hybride (Stacking)** | **99.82%** | Élimine les faux positifs et combine les approches |
+| **Random Forest** | 99.80% | Détection de dictionnaires & règles strictes |
+| **CNN 1D** | 99.77% | Motifs spatiaux (suites logiques) |
+| **LSTM** | 99.87% | Structure séquentielle complexe |
+| **Hybride (Stacking)** | **99.90%** | **Synthèse et élimination des faux positifs** |
 
-## Installation et Démarrage
+---
+
+## 🛠️ Installation & Entraînement
 
 ### 1. Pré-requis
-* Python 3.10 ou supérieur
-* Un navigateur web moderne
+* Python 3.10+
+* Pip
 
 ### 2. Installation
-Cloner le projet et installer les dépendances nécessaires :
-
 ```bash
 git clone [https://github.com/stephanCESI/ADS_Password_IA.git](https://github.com/stephanCESI/ADS_Password_IA.git)
 cd ADS_Password_IA
 pip install -r requirements.txt
 ```
 
-(Assurez-vous d'avoir tensorflow, xgboost, scikit-learn, fastapi, uvicorn, pandas, numpy installés)
-
-### 3. Initialisation des Données (Premier lancement)
-Le projet nécessite la génération des dictionnaires et l'entraînement des modèles avant de pouvoir fonctionner. Exécutez les scripts dans l'ordre suivant :
+### 3. Pipeline d'Entraînement Automatisé
+Le projet utilise un orchestrateur unique pour gérer l'échantillonnage (Reservoir Sampling sur +29 millions de fuites), la tokenization et l'entraînement des 7 modèles :
 
 ```bash
-# A. Créer le dictionnaire linguistique (Mots, Leaks, Villes)
-python backend/app/utils/dictionary_loader.py
-
-# B. Créer le dataset d'entraînement (50k Forts / 50k Faibles)
-python backend/app/utils/dataset_loader.py
-
-# C. Préparer les données Deep Learning (Tokenization)
-python backend/app/utils/dl_data_loader.py
-
-# D. Entraîner les modèles ML (Random Forest, XGB...)
-python backend/app/services/train_model.py
-
-# E. Entraîner les modèles DL (CNN, LSTM...)
-python backend/app/services/train_dl_models.py
-
-# F. Entraîner le Juge Hybride (Stacking)
-python backend/app/services/train_hybrid.py
+python backend/app/retrain_all.py
 ```
 
-### 4. Lancer l'Application
-Démarrez le serveur FastAPI :
+### 4. Démarrage du Serveur
 
 ```bash
 uvicorn backend.app.main:app --reload
 ```
 
-L'interface sera accessible sur : http://127.0.0.1:8000
+L'interface est accessible sur : http://127.0.0.1:8000
 
-## Structure Technique
+## 📁 Structure du Projet
 
-* **`backend/`** : API FastAPI et logique IA
-  * `models/` : Fichiers binaires des modèles (.pkl, .keras)
-  * `services/` : Scripts d'entraînement et de prédiction
-  * `utils/` : Outils de chargement de données, calculs mathématiques et benchmarks
-* **`frontend/`** : Interface Web (HTML/CSS/JS Vanilla)
-* **`datasets/`** : Données brutes et traitées (RockYou, Dictionnaires)
+```text
+ADS_Password_IA/
+├── backend/app/
+│   ├── models/          # Modèles binaires (.pkl, .keras)
+│   ├── routers/         # Endpoints FastAPI
+│   ├── services/        # Logique d'inférence et d'entraînement
+│   ├── utils/           # Mathématiques, Dataset Loader, Tokenizer
+│   └── retrain_all.py   # Orchestrateur du pipeline
+├── datasets/
+│   ├── raw/             # Fuites brutes (RockYou, Top29M)
+│   └── processed/       # Datasets finaux
+└── frontend/            # Interface Web (HTML/CSS/JS)
+```
 
-## Mots-clés :
-* Cybersécurité
+## 📚 Bibliographie & Normes
+ANSSI : Recommandations relatives à l'authentification par mot de passe (2021).
 
-* Intelligence Artificielle (Machine Learning & Deep Learning)
+NIST SP 800-63B : Digital Identity Guidelines.
 
-* Robustesse de mots de passe
-
-* Évaluation & Génération
-
-* Ingénierie Sociale
+SecLists (Daniel Miessler) : Source des datasets de fuites de données.
