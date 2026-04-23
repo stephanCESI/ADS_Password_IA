@@ -288,56 +288,68 @@ def analyse_password(password: str, model_type: str = "rf"):
         "feedback": feedback
     }
 
+# --- GÉNÉRATEUR DE MOTS DE PASSE (APPLE & DICEWARE) ---
 
-# --- GÉNÉRATEUR OPTIMISÉ ---
+def generate_apple_style_password(chunks=4, chunk_size=4):
+    """Génère un mot de passe façon Apple : aBc1-DeF2-gHi3-jKl4"""
+    sys_random = secrets.SystemRandom()
 
-def generate_secure_password():
-    alphabet = string.ascii_letters + string.digits + string.punctuation
-    attempt = 0
-    print("\n--- 🎲 Début Génération 'Ultimate' ---")
+    # On retire les caractères ambigus (I, l, 1, O, 0)
+    safe_lower = "abcdefghijkmnopqrstuvwxyz"
+    safe_upper = "ABCDEFGHJKLMNPQRSTUVWXYZ"
+    safe_digits = "23456789"
+    safe_alphabet = safe_lower + safe_upper + safe_digits
+
+    password_chunks = []
+    for _ in range(chunks):
+        chunk = ''.join(sys_random.choice(safe_alphabet) for _ in range(chunk_size))
+        password_chunks.append(chunk)
+
+    return "-".join(password_chunks)
+
+
+def generate_diceware_password(num_words=6, separator="-"):
+    """Génère une passphrase Diceware à partir du dictionnaire chargé en mémoire."""
+    sys_random = secrets.SystemRandom()
+
+    # Utilisation du dictionnaire global s'il est disponible
+    if dictionaries and 'words' in dictionaries:
+        # On filtre à la volée pour garder des mots mémorisables (4 à 8 lettres)
+        word_list = [w for w in dictionaries['words'] if 4 <= len(w) <= 8]
+    else:
+        word_list = []
+
+    # Fallback de sécurité si le dictionnaire est vide
+    if len(word_list) < 100:
+        word_list = ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "hotel", "india", "juliet"]
+
+    return separator.join(sys_random.choice(word_list) for _ in range(num_words))
+
+
+def generate_secure_password(mode="apple"):
+    """
+    Fonction principale appelée par l'API FastAPI.
+    mode : "apple" (pour les sites) ou "diceware" (pour le master password)
+    """
     start_time = time.time()
 
-    while True:
-        attempt += 1
+    if mode == "diceware":
+        pwd = generate_diceware_password(num_words=6)
+    else:
+        pwd = generate_apple_style_password(chunks=4, chunk_size=4)
 
-        # 1. Tirage
-        pwd = ''.join(secrets.choice(alphabet) for _ in range(16))
+    # Validation par l'IA pour prouver au POC que le générateur fait du bon travail
+    model_check = 'hybrid' if meta_model else 'rf'
+    analysis = analyse_password(pwd, model_type=model_check)
 
-        # 2. Filtres Rapides (CPU)
-        if re.search(r'(.)\1', pwd): continue  # Répétition
-        if not (any(c.islower() for c in pwd) and any(c.isupper() for c in pwd) and
-                any(c.isdigit() for c in pwd) and any(c in string.punctuation for c in pwd)):
-            continue  # Diversité
+    duration = time.time() - start_time
+    print(f"✅ Généré en {duration:.3f}s | Mode: {mode.upper()} | Score IA: {analysis['score']}/100")
 
-        # 3. Pré-Validation par Random Forest (Ultra-Rapide)
-        pre_check = analyse_password(pwd, model_type="rf")
-        if pre_check['score'] < 90:
-            continue
-
-        # 4. Validation Finale par Hybride (Lent mais précis)
-        model_check = 'hybrid' if meta_model else 'rf'
-
-        analysis = analyse_password(pwd, model_type=model_check)
-        score = analysis['score']
-
-        feedbacks_str = " | ".join(analysis['feedback']) if analysis['feedback'] else "None"
-
-        print(f"   [Essai {attempt}] Candidat : {pwd[:4]}... -> Juge ({model_check}): {score}/100 | "
-              f"Feedbacks: {feedbacks_str}")
-
-        has_negative_feedback = False
-        for msg in analysis['feedback']:
-            if "excellent" not in msg.lower():
-                has_negative_feedback = True
-                break
-
-        # Condition : Score excellent ET pas de reproche
-        if score >= 90 and not has_negative_feedback:
-            duration = time.time() - start_time
-            print(f"✅ TROUVÉ en {duration:.2f}s et {attempt} essais !")
-            return pwd
-
-        # Sécurité
-        if attempt > 200:
-            print("⚠️ Trop d'essais, on relâche les critères.")
-            return pwd
+    # On retourne un dictionnaire propre pour l'API
+    return {
+        "password": pwd,
+        "mode": mode,
+        "ai_score": analysis['score'],
+        "ai_feedback": analysis['feedback'],
+        "generation_time_sec": round(duration, 4)
+    }

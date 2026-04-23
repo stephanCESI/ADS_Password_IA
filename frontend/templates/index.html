@@ -27,31 +27,162 @@
 
     <!-- 2. MENU LATÉRAL -->
     <div id="sideMenu" class="side-menu">
-        <div class="menu-header">
-            <h3 class="menu-title">DOCUMENTATION</h3>
-            <button id="closeMenuBtn" class="close-btn">&times;</button>
-        </div>
-        <ul class="menu-list">
-            <li data-doc="projet"><i class="fa-solid fa-bullseye"></i> Le Projet & Objectifs</li>
-            <li data-doc="algo"><i class="fa-solid fa-brain"></i> L'Algorithme Random Forest</li>
-            <li data-doc="dataset"><i class="fa-solid fa-database"></i> Le Dataset RockYou</li>
-            <li data-doc="biblio"><i class="fa-solid fa-book"></i> Bibliographie</li>
-        </ul>
-        <div class="menu-footer">
-            <small>ADS - A4 2025</small>
-        </div>
+    <div class="menu-header">
+        <h3 class="menu-title">DOCUMENTATION</h3>
+        <button id="closeMenuBtn" class="close-btn">&times;</button>
     </div>
+    <ul class="menu-list">
+        <li data-doc="projet"><i class="fa-solid fa-bullseye"></i> 1. Projet & Objectifs</li>
+        <li data-doc="paradoxe"><i class="fa-solid fa-scale-unbalanced"></i> 2. Le Paradoxe Humain (Entropie)</li>
+        <li data-doc="architecture"><i class="fa-solid fa-network-wired"></i> 3. Architecture Hybride (IA)</li>
+        <li data-doc="dataset"><i class="fa-solid fa-database"></i> 4. Ingénierie des Données</li>
+        <li data-doc="generation"><i class="fa-solid fa-dice"></i> 5. Génération (Diceware & CSPRNG)</li>
+        <li data-doc="guide"><i class="fa-solid fa-gamepad"></i> 6. Guide d'utilisation du POC</li>
+        <li data-doc="biblio"><i class="fa-solid fa-book"></i> 7. Bibliographie</li>
+    </ul>
+    <div class="menu-footer">
+        <small>ADS - A4 2025</small>
+    </div>
+</div>
 
-    <!-- 3. DOC OVERLAY -->
-    <div id="docOverlay" class="doc-overlay hidden">
-        <div class="doc-container">
-            <button id="closeDocBtn" class="back-btn"><i class="fa-solid fa-arrow-left"></i> Retour</button>
-            <div id="content-projet" class="doc-content hidden"><h1>🎯 Le Projet</h1><p>Ce projet d'Analyse de Données...</p></div>
-            <div id="content-algo" class="doc-content hidden"><h1>🧠 Random Forest</h1><p>Nous utilisons un algorithme...</p></div>
-            <div id="content-dataset" class="doc-content hidden"><h1>💾 Les Données</h1><p>Le modèle a été entraîné...</p></div>
-            <div id="content-biblio" class="doc-content hidden"><h1>📚 Bibliographie</h1><p>Ressources utilisées...</p></div>
+<div id="docOverlay" class="doc-overlay hidden">
+    <div class="doc-container">
+        <button id="closeDocBtn" class="back-btn"><i class="fa-solid fa-arrow-left"></i> Retour</button>
+
+        <div id="content-projet" class="doc-content hidden">
+            <h1>🎯 1. Projet & Objectifs</h1>
+
+<h3>Problématique</h3>
+<p>Les méthodes classiques d’évaluation de la robustesse des mots de passe (exigences de longueur et de diversité des caractères) sont devenues obsolètes face aux techniques modernes de cassage (attaques par dictionnaire hybride, règles heuristiques). Un mot de passe respectant toutes les règles de complexité peut rester hautement vulnérable s'il suit un modèle cognitif humain prédictible.</p>
+
+<h3>Objectifs de l'ADS</h3>
+<ul>
+    <li>Démontrer les limites de l'entropie de Shannon comme métrique unique de sécurité.</li>
+    <li>Concevoir une architecture d'Intelligence Artificielle capable d'identifier les structures sémantiques et comportementales humaines dans les mots de passe.</li>
+    <li>Proposer un système de génération de mots de passe cryptographiquement sûr, adapté à la charge cognitive humaine (Diceware) et validé par apprentissage automatique.</li>
+</ul>
+
+<h3>Périmètre du POC</h3>
+<p>Application web locale démontrant l'évaluation hybride (Règles + Deep Learning), la génération sécurisée (CSPRNG), et la simulation d'attaques ciblées (OSINT).</p>
         </div>
+
+        <div id="content-paradoxe" class="doc-content hidden">
+            <h1>⚖️ 2. Le Paradoxe Humain</h1>
+
+<p>La sécurité informatique repose sur une dichotomie entre la complexité mathématique requise par les machines et les limites cognitives de la mémoire humaine. Ce paradoxe engendre l'adoption de modèles structurels prédictibles.</p>
+
+<h3>Entropie vs Sémantique</h3>
+<ul>
+    <li><strong>Entropie (Machine) :</strong> Mesure la difficulté de découvrir un mot de passe par force brute pure. Une entropie de 128 bits est inatteignable par force brute matérielle actuelle.</li>
+    <li><strong>Sémantique (Humain) :</strong> Pour mémoriser, l'humain injecte du sens (prénoms, mots du dictionnaire, dates) et utilise des transformations standardisées (Majuscule initiale, substitutions Leet, symbole de ponctuation final).</li>
+</ul>
+
+<h3>Tableau Comparatif</h3>
+<table class="table table-dark table-striped mt-3">
+    <thead>
+        <tr>
+            <th>Mot de Passe</th>
+            <th>Métrique Classique</th>
+            <th>Réalité (Attaque par Dictionnaire)</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>Marseille2024!</code></td>
+            <td>100/100 (Long, 4 types de caractères)</td>
+            <td>Cassé en &lt; 1 seconde (Lieu + Année + Symbole)</td>
+        </tr>
+        <tr>
+            <td><code>P@ssw0rd123</code></td>
+            <td>100/100 (Diversité maximale)</td>
+            <td>Cassé instantanément (Masque Leet connu + Suite logique)</td>
+        </tr>
+        <tr>
+            <td><code>correct-horse-battery-staple</code></td>
+            <td>Faible (Aucun chiffre ni symbole)</td>
+            <td>Mathématiquement impossible à bruteforcer (Diceware 4 mots)</td>
+        </tr>
+    </tbody>
+</table>
+            </div>
+
+        <div id="content-architecture" class="doc-content hidden">
+            <h1>🧠 3. Architecture Hybride (Stacking)</h1>
+
+<p>Le système utilise une architecture d'apprentissage d'ensemble (Stacking) pour combiner l'extraction de caractéristiques déterministes et la reconnaissance de motifs séquentiels.</p>
+
+<h3>Niveau 1 : Extraction Déterministe</h3>
+<ul>
+    <li>Calcul de l'entropie, de la diversité et de la longueur normalisée.</li>
+    <li>Analyse de corpus par recherche inversée et traduction Leet Speak (Détection stricte de dictionnaires).</li>
+</ul>
+
+<h3>Niveau 2 : Experts Locaux (Modèles de Base)</h3>
+<ul>
+    <li><strong>Machine Learning Classique (RF, XGBoost, LogReg) :</strong> Ingèrent le vecteur de caractéristiques mathématiques et linguistiques. Excellents pour l'explicabilité et les règles strictes.</li>
+    <li><strong>Deep Learning (CNN 1D, LSTM, DNN) :</strong> Ingèrent la séquence brute de caractères tokenisés. Le <code>CNN</code> repère les motifs spatiaux locaux (ex: suites de clavier). Le <code>LSTM</code> capture les dépendances sémantiques à long terme (ex: structure syntaxique).</li>
+</ul>
+
+<h3>Niveau 3 : Le Méta-Modèle (Juge)</h3>
+<p>Un classifieur de régression logistique reçoit en entrée les 6 probabilités de prédiction des experts locaux. Il apprend lors de la phase d'entraînement à pondérer la confiance accordée à chaque modèle en fonction de la structure du mot de passe.</p>
+            </div>
+
+        <div id="content-dataset" class="doc-content hidden">
+            <h1>💾 4. Ingénierie des Données</h1>
+
+<p>La qualité des prédictions repose sur un dataset de 100 000 échantillons, conçu pour éliminer les biais d'apprentissage majoritaires et temporels.</p>
+
+<h3>Classe Faible (Label 0) : Reservoir Sampling</h3>
+<p>Extraction équiprobable de 50 000 lignes à partir de dumps de mots de passe compromis (RockYou + bases de données modernes > 2020). Cette méthode garantit une représentativité statistique des fuites réelles sans saturer la mémoire vive.</p>
+
+<h3>Classe Forte (Label 1) : Évitement du biais binaire</h3>
+<p>La classe forte combine deux méthodes de génération :</p>
+<ul>
+    <li><strong>70% de chaînes aléatoires :</strong> Caractères ASCII générés par CSPRNG.</li>
+    <li><strong>30% de mots de passe Diceware :</strong> Concaténations de mots du dictionnaire. Force le modèle à comprendre que la présence d'un mot humain n'induit pas systématiquement une vulnérabilité si la longueur compense l'entropie.</li>
+</ul>
+            </div>
+
+        <div id="content-generation" class="doc-content hidden">
+            <h1>🎲 5. Génération Sécurisée (CSPRNG)</h1>
+
+<p>Le générateur natif contourne l'utilisation des générateurs pseudo-aléatoires standard (PRNG type Mersenne Twister), qui sont vulnérables à la prédiction de l'état interne (Seed).</p>
+
+<h3>Implémentation Cryptographique</h3>
+<p>Utilisation exclusive du module Python <code>secrets</code> (CSPRNG), garantissant l'accès aux sources d'entropie du système d'exploitation (<code>/dev/urandom</code> sous Linux, <code>CryptGenRandom</code> sous Windows).</p>
+
+<h3>Stratégie Opérationnelle (OPSEC)</h3>
+<ul>
+    <li><strong>Mode Diceware (Master Password) :</strong> Génération d'une phrase secrète composée de mots du dictionnaire. Maximise l'entropie (~80 à 100 bits) tout en conservant une charge cognitive faible, idéale pour retenir le mot de passe principal d'un gestionnaire.</li>
+    <li><strong>Mode Apple (Site Web) :</strong> Chaîne aléatoire structurée par blocs séparés de tirets (ex: <code>aBc1-DeF2-gHi3</code>). Les caractères visuellement ambigus (I, l, 1, O, 0) sont exclus pour limiter les erreurs de saisie manuelles (cas de défaillance du gestionnaire).</li>
+</ul>
+            </div>
+
+        <div id="content-guide" class="doc-content hidden">
+            <h1>🎮 6. Guide d'utilisation du POC</h1>
+
+<p>L'interface graphique expose directement les fonctionnalités d'analyse et de test développées dans le backend FastAPI.</p>
+
+<ul>
+    <li><strong>Home :</strong> Analyse immédiate du mot de passe saisi. Retourne le score de robustesse probabiliste calculé par le Juge Hybride et un diagnostic textuel des failles repérées.</li>
+    <li><strong>Générateur :</strong> Simulation de l'implémentation opérationnelle (Génération CSPRNG + Vérification en temps réel par le modèle Deep Learning avant affichage à l'utilisateur).</li>
+    <li><strong>Duels :</strong> Modules de comparaison. Le <em>Duel de Mots</em> permet de comparer la robustesse sémantique de deux propositions. Le <em>Duel de Modèles</em> démontre les différences d'évaluation entre l'analyse mathématique pure (Random Forest) et l'analyse de séquence (LSTM).</li>
+    <li><strong>Attaque Ciblée :</strong> Démonstration d'une attaque par ingénierie sociale (OSINT). Le système détecte la réutilisation des variables contextuelles (Nom, CP, Date de naissance) directement injectées dans la chaîne de caractères.</li>
+</ul>
+            </div>
+
+        <div id="content-biblio" class="doc-content hidden">
+            <h1>📚 7. Bibliographie & Normes</h1>
+
+<ul>
+    <li><strong>ANSSI (Agence Nationale de la Sécurité des Systèmes d'Information) :</strong> <em>Recommandations relatives à l'authentification par mot de passe</em> (2021). Orientations sur l'abandon des règles de complexité obligatoires au profit de la longueur et de la vérification de compromission.</li>
+    <li><strong>NIST SP 800-63B :</strong> <em>Digital Identity Guidelines - Authentication and Lifecycle Management</em>. Établissement des standards internationaux pour l'évaluation de l'entropie et la génération aléatoire (CSPRNG).</li>
+    <li><strong>SecLists (Daniel Miessler) & Weakpass :</strong> Fournisseurs open-source des jeux de données réels exploités pour le *Reservoir Sampling* (Fuites de bases de données, Top millions).</li>
+    <li><strong>Bibliothèques Techniques :</strong> <em>TensorFlow/Keras</em> (Implémentation Deep Learning), <em>Scikit-Learn</em> (Algorithmes ensemblistes et Régression Logistique).</li>
+</ul>
+            </div>
     </div>
+</div>
 
     <!-- SÉLECTEUR DE MODÈLE -->
     <div class="model-selector-wrapper">
@@ -106,12 +237,16 @@
                 <button id="copy-btn" class="copy-icon" title="Copier"><i class="fa-regular fa-copy"></i></button>
             </div>
 
-            <div class="d-flex gap-4 mb-4">
-                <button id="btn-generate" class="btn-action btn-gen">
-                    <i class="fa-solid fa-rotate"></i> GÉNÉRER
+            <div class="d-flex gap-3 mb-4">
+                <button id="btn-gen-apple" class="btn-action btn-gen" style="font-size: 0.9rem;">
+                    <i class="fa-brands fa-apple"></i> SITE WEB (Apple)
                 </button>
 
-                <button id="btn-analyze-gen" class="btn-action btn-analyze hidden">
+                <button id="btn-gen-diceware" class="btn-action btn-gen" style="font-size: 0.9rem;">
+                    <i class="fa-solid fa-dice"></i> MASTER (Diceware)
+                </button>
+
+                <button id="btn-analyze-gen" class="btn-action btn-analyze hidden" style="font-size: 0.9rem;">
                     <i class="fa-solid fa-magnifying-glass-chart"></i> ANALYSER
                 </button>
             </div>

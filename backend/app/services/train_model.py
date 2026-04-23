@@ -29,6 +29,58 @@ MODEL_DIR = BASE_DIR / "backend" / "app" / "models"
 # Création du dossier pour sauvegarder les modèles
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
+LEET_TRANS = str.maketrans({
+    '4': 'a', '@': 'a',
+    '3': 'e',
+    '1': 'i', '!': 'i',
+    '0': 'o',
+    '5': 's', '$': 's',
+    '7': 't', '+': 't'
+})
+
+
+def calculate_linguistic_features(password, dicts):
+    """Calcule les features linguistiques (Standard, Inversé et Leet Speak)"""
+    words_set, names_set, places_set, weak_set = dicts
+
+    pwd_str = str(password).lower()
+    clean_pwd = re.sub(r'[^a-z]', '', pwd_str)
+    clean_rev = clean_pwd[::-1]
+
+    unleeted_pwd = pwd_str.translate(LEET_TRANS)
+    clean_unleeted = re.sub(r'[^a-z]', '', unleeted_pwd)
+
+    # 5 features strictes
+    features = {'is_weak_exact': 0, 'has_word': 0, 'has_name': 0, 'has_place': 0, 'has_leetspeak': 0}
+
+    # 1. Check Leak Exact
+    if pwd_str in weak_set or pwd_str[::-1] in weak_set:
+        features['is_weak_exact'] = 1
+
+    def check_sets(text):
+        found = False
+        if len(text) < 4: return False
+        if text in words_set or text in weak_set:
+            features['has_word'] = 1
+            found = True
+        elif text in names_set:
+            features['has_name'] = 1
+            found = True
+        elif text in places_set:
+            features['has_place'] = 1
+            found = True
+        return found
+
+    # 2. Check Normal & Inversé
+    check_sets(clean_pwd)
+    check_sets(clean_rev)
+
+    # 3. Check Leet Speak
+    if clean_unleeted != clean_pwd:
+        if check_sets(clean_unleeted):
+            features['has_leetspeak'] = 1
+
+    return pd.Series(features)
 
 def load_dictionaries():
     """Charge les dictionnaires en mémoire (Sets)"""
@@ -47,47 +99,6 @@ def load_dictionaries():
     except FileNotFoundError:
         print("ERREUR CRITIQUE : Dictionnaire introuvable.")
         exit()
-
-
-def calculate_linguistic_features(password, dicts):
-    """Calcule les features linguistiques (Avec détection INVERSÉE)"""
-    words_set, names_set, places_set, weak_set = dicts
-
-    pwd_str = str(password).lower()
-    clean_pwd = re.sub(r'[^a-z]', '', pwd_str)
-
-    # NOUVEAU : On inverse la chaîne nettoyée (ex: "drowssap" -> "password")
-    clean_rev = clean_pwd[::-1]
-
-    features = {'is_weak_exact': 0, 'has_word': 0, 'has_name': 0, 'has_place': 0}
-
-    # 1. Check Leak Exact (Endroit et Envers)
-    # Si le mdp est "drowssap" et que "password" est un leak, c'est grave.
-    if pwd_str in weak_set:
-        features['is_weak_exact'] = 1
-    elif pwd_str[::-1] in weak_set:  # Check leak inversé
-        features['is_weak_exact'] = 1
-
-    n = len(clean_pwd)
-    if n >= 4:
-        # 2. Check Normal
-        if clean_pwd in words_set or clean_pwd in weak_set:
-            features['has_word'] = 1
-        elif clean_pwd in names_set:
-            features['has_name'] = 1
-        elif clean_pwd in places_set:
-            features['has_place'] = 1
-
-        # 3. NOUVEAU : Check Inversé
-        # Si le mot inversé existe, on considère que c'est un mot du dico
-        if clean_rev in words_set or clean_rev in weak_set:
-            features['has_word'] = 1
-        elif clean_rev in names_set:
-            features['has_name'] = 1
-        elif clean_rev in places_set:
-            features['has_place'] = 1
-
-    return pd.Series(features)
 
 def train():
     print("--- 🚀 DÉBUT DE L'ENTRAÎNEMENT MULTI-MODÈLES ---")

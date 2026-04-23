@@ -47,7 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const cardIa2 = document.getElementById('card-ia2');
 
     // Générateur
-    const btnGen = document.getElementById('btn-generate');
+    // Générateur
+    const btnGenApple = document.getElementById('btn-gen-apple');
+    const btnGenDiceware = document.getElementById('btn-gen-diceware');
     const btnAnalyzeGen = document.getElementById('btn-analyze-gen');
     const displayGen = document.getElementById('gen-password-display');
     const resultGen = document.getElementById('gen-result');
@@ -155,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectedModel = modelSelect ? modelSelect.value : 'rf';
         if (resultSolo) {
             resultSolo.classList.remove('hidden');
-            resultSolo.innerHTML = '<div class="text-center text-muted"><i class="fa-solid fa-spinner fa-spin"></i> Analyse en cours...</div>';
+            resultSolo.innerHTML = '<div class="text-center text-white"><i class="fa-solid fa-spinner fa-spin"></i> Analyse en cours...</div>';
         }
         const data = await fetchAnalysis(password, selectedModel);
         if (resultSolo && data) renderCard(resultSolo, data);
@@ -166,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const model = modelSelect ? modelSelect.value : 'rf';
         if (resultGen) {
             resultGen.classList.remove('hidden');
-            resultGen.innerHTML = '<div class="text-center text-muted">Vérification par le Juge...</div>';
+            resultGen.innerHTML = '<div class="text-center text-white">Vérification par le Juge...</div>';
         }
         const data = await fetchAnalysis(generatedPasswordCache, model);
         if (resultGen && data) renderCard(resultGen, data);
@@ -335,19 +337,38 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- GÉNÉRATEUR ---
-    if (btnGen) {
-        btnGen.addEventListener('click', async () => {
-            displayGen.style.color = "#aaa"; displayGen.innerText = "Génération...";
-            resultGen.classList.add('hidden'); btnAnalyzeGen.classList.add('hidden');
-            try {
-                const response = await fetch("http://127.0.0.1:8000/generate-password");
-                const data = await response.json();
-                generatedPasswordCache = data.generated_password;
-                displayGen.innerText = generatedPasswordCache; displayGen.style.color = "#fff";
-                btnAnalyzeGen.classList.remove('hidden');
-            } catch (e) { displayGen.innerText = "Erreur Serveur"; }
-        });
+    async function handleGenerate(mode) {
+        displayGen.style.color = "#aaa";
+        displayGen.innerText = "Génération en cours...";
+        resultGen.classList.add('hidden');
+        btnAnalyzeGen.classList.add('hidden');
+
+        try {
+            // Ajout du paramètre 'mode' dans la requête GET
+            const response = await fetch(`http://127.0.0.1:8000/generate-password?mode=${mode}`);
+            const data = await response.json();
+
+            // Le nouveau backend renvoie data.password (et non plus data.generated_password)
+            generatedPasswordCache = data.password;
+
+            displayGen.innerText = generatedPasswordCache;
+            displayGen.style.color = "#fff";
+            btnAnalyzeGen.classList.remove('hidden');
+
+            console.log(`✅ Génération ${mode} : Score IA = ${data.ai_score}/100`);
+        } catch (e) {
+            displayGen.innerText = "Erreur Serveur";
+            console.error(e);
+        }
+    }
+
+    if (btnGenApple && btnGenDiceware) {
+        // Attachement des événements avec le mode correspondant
+        btnGenApple.addEventListener('click', () => handleGenerate('apple'));
+        btnGenDiceware.addEventListener('click', () => handleGenerate('diceware'));
+
         btnAnalyzeGen.addEventListener('click', runGenAnalysis);
+
         btnCopy.addEventListener('click', () => {
             if(generatedPasswordCache) {
                 navigator.clipboard.writeText(generatedPasswordCache);
@@ -407,17 +428,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="row text-center mt-4 mb-4">
                     <div class="col-6 border-end border-secondary">
-                        <small class="text-muted d-block" style="font-size:0.7rem;text-transform:uppercase; letter-spacing: 1px;">Temps estimé (Bruteforce)</small>
+                        <small class="text-white d-block" style="font-size:0.7rem;text-transform:uppercase; letter-spacing: 1px;">Temps estimé (Bruteforce)</small>
                         <span class="fw-bold text-white fs-5">${data.details.crack_time_display}</span>
                     </div>
                     <div class="col-6">
-                        <small class="text-muted d-block" style="font-size:0.7rem;text-transform:uppercase; letter-spacing: 1px;">Complexité (Entropie)</small>
+                        <small class="text-white d-block" style="font-size:0.7rem;text-transform:uppercase; letter-spacing: 1px;">Complexité (Entropie)</small>
                         <span class="fw-bold text-white fs-5">${data.details.entropy_bits} bits</span>
                     </div>
                 </div>
                 <hr style="border-color:rgba(255,255,255,0.1)">
                 <div class="mt-3 text-start ps-2 pe-2">
-                    <h6 class="text-muted mb-3" style="font-size:0.8rem">DIAGNOSTIC :</h6>
+                    <h6 class="text-white mb-3" style="font-size:0.8rem">DIAGNOSTIC :</h6>
                     <div style="color: #e0d9f3;">${feedbackHTML}</div>
                 </div>
             `;

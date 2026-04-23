@@ -2,55 +2,56 @@ from pathlib import Path
 import pandas as pd
 import string
 import secrets
-import random
+import random  # Utilisé UNIQUEMENT pour piocher dans les fichiers, pas pour générer les mots de passe
 import csv
 
-# --- IMPORT CENTRALISÉ DES CALCULS ---
-# Plus besoin de réécrire les maths ici !
+# --- IMPORT DES CALCULS MATHÉMATIQUES ---
 from backend.app.utils.math_features import compute_length_norm, compute_diversity, compute_entropy
 
 # --- CONFIGURATION DES CHEMINS ---
 DATASET_DIR = Path(__file__).resolve().parents[3] / "datasets"
 RAW_DIR = DATASET_DIR / "raw"
+LEAKS_DIR = RAW_DIR / "leaks"
 PROCESSED_DIR = DATASET_DIR / "processed"
+DICT_DIR = DATASET_DIR / "Dictionnaries" / "processed"
 
 RAW_DIR.mkdir(parents=True, exist_ok=True)
+LEAKS_DIR.mkdir(parents=True, exist_ok=True)
 PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def load_password_dataset(filename="passwords_labeled.csv"):
-    print(f"Chargement de {filename}...")
-    df = pd.read_csv(RAW_DIR / filename)
-    df = df.drop_duplicates()
-    df = df[df['password'].str.len() >= 4]
-    df['password'] = df['password'].str.encode('ascii', errors='ignore').str.decode('ascii')
-    return df
+# --- CHARGEMENT DU DICTIONNAIRE POUR DICEWARE ---
+def load_word_list_for_diceware():
+    """Charge les mots du dictionnaire pour générer des passphrases fortes."""
+    dict_path = DICT_DIR / "linguistic_dictionary.csv"
+    try:
+        df = pd.read_csv(dict_path)
+        words = df[(df['category'] == 'word') & (df['token'].str.len() >= 4)]['token'].dropna().tolist()
+        if len(words) > 1000:
+            return words
+    except:
+        pass
+    return ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf"]
 
 
-def add_features(df):
-    print("Ajout des features mathématiques (via math_features.py)...")
-    df['password'] = df['password'].astype(str)
-
-    # On utilise les fonctions importées
-    df['length_norm'] = df['password'].apply(compute_length_norm)
-    df['diversity'] = df['password'].apply(compute_diversity)
-    df['entropy'] = df['password'].apply(compute_entropy)
-    return df
+WORD_LIST = load_word_list_for_diceware()
 
 
-def add_labels(df):
-    if 'label' not in df.columns:
-        print("Génération des labels manquants (Fallback)...")
-        df['label'] = df.apply(
-            lambda row: 0 if row['length_norm'] < 0.5 or row['diversity'] < 0.5 else 1, axis=1
-        )
-    return df
+# --- GÉNÉRATION DES MOTS DE PASSE FORTS (LABEL 1) ---
+def generate_strong_password(min_len=14, max_len=32):
+    """Génération hybride cryptographiquement sûre (70% Aléatoire, 30% Diceware)"""
+    sys_random = secrets.SystemRandom()
 
+    # 30% de chances de générer un Diceware
+    if sys_random.random() < 0.30 and len(WORD_LIST) > 10:
+        num_words = sys_random.randint(5, 7)
+        separator = sys_random.choice(['-', '_', '.', '', ' '])
+        return separator.join(sys_random.choice(WORD_LIST) for _ in range(num_words))
 
-# --- GÉNÉRATEURS ---
-def generate_strong_password(min_len=10, max_len=22):
-    length = secrets.choice(range(min_len, max_len + 1))
-    r = random.random()
+    # 70% de chances de générer de l'aléatoire
+    length = sys_random.randint(min_len, max_len)
+    r = sys_random.random()
+
     if r < 0.50:
         alphabet = string.ascii_letters + string.digits + string.punctuation
     elif r < 0.80:
@@ -59,88 +60,126 @@ def generate_strong_password(min_len=10, max_len=22):
             string.ascii_letters + string.punctuation,
             string.ascii_lowercase + string.ascii_uppercase + string.punctuation,
         ]
-        alphabet = secrets.choice(pools)
+        alphabet = sys_random.choice(pools)
     else:
         pools = [
             string.ascii_letters + string.digits,
             string.ascii_letters + "!@#$%&?",
         ]
-        alphabet = secrets.choice(pools)
-    return ''.join(secrets.choice(alphabet) for _ in range(length))
+        alphabet = sys_random.choice(pools)
+
+    return ''.join(sys_random.choice(alphabet) for _ in range(length))
 
 
 def create_strong_passwords_csv(n=50000, filename="strong_passwords.csv"):
-    print(f"Génération de {n} mots de passe forts...")
+    print(f"Génération de {n} mots de passe FORTS (CSPRNG & Diceware)...")
     passwords = [generate_strong_password() for _ in range(n)]
-    df = pd.DataFrame({"password": passwords})
-    df["label"] = 1
+    df = pd.DataFrame({"password": passwords, "label": 1})
     df.to_csv(RAW_DIR / filename, index=False, sep=',', quoting=csv.QUOTE_NONNUMERIC)
-    print(f"-> Sauvegardé dans {filename}")
+    print(f"✅ Sauvegardé dans {filename}")
     return df
 
 
-def load_rockyou_sample(n=50000):
-    rockyou_path = RAW_DIR / "rockyou.txt"
-    if not rockyou_path.exists():
-        raise FileNotFoundError(f"Le fichier RockYou est introuvable ici : {rockyou_path}")
+# --- EXTRACTION DES MOTS DE PASSE FAIBLES (LABEL 0) ---
+def load_weak_passwords_sample(n=50000):
+    """Lit TOUS les fichiers .txt dans datasets/raw/leaks/ et échantillonne (Reservoir Sampling)"""
+    txt_files = list(LEAKS_DIR.glob("*.txt"))
 
-    print(f"Lecture et échantillonnage de RockYou ({n} lignes)... Patience.")
+    if not txt_files:
+        print(f"⚠️ Aucun fichier trouvé dans {LEAKS_DIR}. Je cherche dans {RAW_DIR}...")
+        txt_files = list(RAW_DIR.glob("*.txt"))
+
+    if not txt_files:
+        raise FileNotFoundError(f"❌ AUCUN dictionnaire de fuites (.txt) trouvé ! Ajoutez RockYou ou Top29M.")
+
+    print(f"Lecture et échantillonnage depuis {len(txt_files)} fichiers de leaks...")
     reservoir = []
     seen = set()
-    try:
-        with open(rockyou_path, "r", encoding="latin-1") as f:
-            for i, line in enumerate(f, start=1):
-                pwd = line.strip()
-                if not pwd: continue
-                if len(pwd) > 50: continue
-                if pwd in seen: continue
+    total_lines = 0
 
-                if len(reservoir) < n:
-                    reservoir.append(pwd)
-                    seen.add(pwd)
-                else:
-                    j = random.randint(1, i)
-                    if j <= n:
-                        removed = reservoir[j - 1]
-                        seen.remove(removed)
-                        reservoir[j - 1] = pwd
+    try:
+        for filepath in txt_files:
+            print(f"   -> Analyse de {filepath.name}...")
+            with open(filepath, "r", encoding="latin-1", errors="ignore") as f:
+                for line in f:
+                    pwd = line.strip()
+                    # Ignorer les vides, trop longs ou déjà vus
+                    if not pwd or len(pwd) > 50 or pwd in seen:
+                        continue
+
+                    total_lines += 1
+
+                    # Logique du Reservoir Sampling
+                    if len(reservoir) < n:
+                        reservoir.append(pwd)
                         seen.add(pwd)
-                if i % 1000000 == 0:
-                    print(f"   -> {i} lignes analysées...")
+                    else:
+                        # random() classique est suffisant ici (rapidité pour 40M de lignes)
+                        j = random.randint(0, total_lines - 1)
+                        if j < n:
+                            seen.remove(reservoir[j])
+                            reservoir[j] = pwd
+                            seen.add(pwd)
     except KeyboardInterrupt:
-        print("\nArrêt manuel.")
+        print("\n⚠️ Arrêt manuel de l'échantillonnage.")
 
     return pd.DataFrame({"password": reservoir})
 
 
 def create_weak_passwords_csv(n=50000, filename="weak_passwords.csv"):
-    print(f"Extraction de {n} mots de passe faibles depuis RockYou...")
-    df = load_rockyou_sample(int(n * 1.5))
+    print(f"Extraction de {n} mots de passe FAIBLES depuis les leaks...")
+    # On tire un peu plus de lignes au cas où le nettoyage en supprime
+    df = load_weak_passwords_sample(int(n * 1.5))
+
+    # Nettoyage : On ne garde que les caractères ASCII standards
     allowed = set(string.ascii_letters + string.digits + string.punctuation + " ")
     df = df[df["password"].apply(lambda p: all(c in allowed for c in str(p)))]
+
+    # On coupe à n exactement
     df = df.head(n)
     df["label"] = 0
     df.to_csv(RAW_DIR / filename, index=False, sep=',', quoting=csv.QUOTE_NONNUMERIC)
-    print(f"-> Sauvegardé dans {filename} ({len(df)} lignes)")
+    print(f"✅ Sauvegardé dans {filename} ({len(df)} lignes)")
     return df
 
 
+# --- FUSION ET CRÉATION DU DATASET FINAL ---
 def create_labeled_dataset(weak_filename="weak_passwords.csv", strong_filename="strong_passwords.csv",
                            output_filename="passwords_labeled.csv"):
-    print("Fusion des datasets...")
+    print("Fusion et mélange des datasets...")
     df_weak = pd.read_csv(RAW_DIR / weak_filename)
     df_strong = pd.read_csv(RAW_DIR / strong_filename)
+
     df_combined = pd.concat([df_weak, df_strong], ignore_index=True)
+    # Mélange aléatoire (shuffle)
     df_combined = df_combined.sample(frac=1, random_state=42).reset_index(drop=True)
     df_combined.to_csv(RAW_DIR / output_filename, index=False)
-    print(f"Dataset labellisé créé : {output_filename}")
+    print(f"✅ Dataset labellisé brut créé : {output_filename} ({len(df_combined)} lignes)")
     return df_combined
 
 
 def create_processed_dataset(raw_filename="passwords_labeled.csv", processed_filename="passwords_processed.csv"):
-    df = load_password_dataset(raw_filename)
-    df = add_features(df)  # Utilise maintenant les fonctions importées
-    df = add_labels(df)
+    print("Ajout des features mathématiques...")
+    df = pd.read_csv(RAW_DIR / raw_filename)
+    df = df.drop_duplicates(subset=['password'])
+    df = df[df['password'].str.len() >= 4]
+    df['password'] = df['password'].astype(str)
+
+    # Application des fonctions de math_features.py
+    df['length_norm'] = df['password'].apply(compute_length_norm)
+    df['diversity'] = df['password'].apply(compute_diversity)
+    df['entropy'] = df['password'].apply(compute_entropy)
+
     df.to_csv(PROCESSED_DIR / processed_filename, index=False, sep=',', quoting=csv.QUOTE_NONNUMERIC)
-    print(f"Dataset PROCESSED prêt : {processed_filename}")
+    print(f"✅ Dataset FINAL PRÊT : {processed_filename}")
     return df
+
+
+# --- POINT D'ENTRÉE ---
+if __name__ == "__main__":
+    print("--- 🚀 CRÉATION DU DATASET D'ENTRAÎNEMENT ---")
+    create_weak_passwords_csv(n=50000)
+    create_strong_passwords_csv(n=50000)
+    create_labeled_dataset()
+    create_processed_dataset()
+    print("--- 🎉 OPÉRATION TERMINÉE ---")

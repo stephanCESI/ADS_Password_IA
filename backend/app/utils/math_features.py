@@ -9,27 +9,10 @@ MAX_ENTROPY = 100.0
 
 
 def compute_length_norm(password: str) -> float:
-    """
-    Calcule la longueur normalisée via une Sigmoïde.
-
-    Logique :
-    - On veut pénaliser fort les mots de passe courts (< 8).
-    - On veut récompenser vite ceux qui atteignent 12-14.
-    - On sature vers 1.0 autour de 20.
-
-    Formule Sigmoïde ajustée :
-    Centre (x0) = 11 caractères (c'est le pivot moyen/fort)
-    Pente (k) = 0.5 (courbe assez douce)
-    """
     L = len(str(password))
     if L == 0: return 0.0
-
-    # Formule Sigmoïde standard : 1 / (1 + e^-k(x-x0))
-    # Centre à 11, pente 0.5
-    sigmoid_value = 1 / (1 + math.exp(-0.5 * (L - 11)))
-
-    return sigmoid_value
-
+    # Pivot décalé à 14 (standard moderne), pente 0.4 (plus exigeant)
+    return 1 / (1 + math.exp(-0.4 * (L - 14)))
 
 def compute_diversity(password: str) -> float:
     """
@@ -64,9 +47,6 @@ def compute_diversity(password: str) -> float:
 
 
 def compute_entropy(password: str) -> float:
-    """
-    Entropie de Shannon normalisée (Inchangée, c'est la référence).
-    """
     password = str(password)
     if not password: return 0.0
 
@@ -79,7 +59,6 @@ def compute_entropy(password: str) -> float:
     if pool_size == 0: return 0.0
 
     entropy_bits = len(password) * math.log2(pool_size)
-
     return min(entropy_bits / MAX_ENTROPY, 1.0)
 
 def calculate_bruteforce_time(password):
