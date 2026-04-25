@@ -101,10 +101,3 @@ ADS_Password_IA/
 │   └── processed/       # Datasets finaux
 └── frontend/            # Interface Web (HTML/CSS/JS)
 ```
-
-## 📚 Bibliographie & Normes
-ANSSI : Recommandations relatives à l'authentification par mot de passe (2021).
-
-NIST SP 800-63B : Digital Identity Guidelines.
-
-SecLists (Daniel Miessler) : Source des datasets de fuites de données.
