@@ -10,7 +10,7 @@ async def test_password(data: PasswordRequest):
 
 @router.get("/generate-password")
 async def get_generated_password(
-    mode: str = Query("apple", description="Mode de génération: 'apple' ou 'diceware'")
+    mode: str = Query("chunked_password", description="Mode de génération: 'chunked_password' ou 'diceware'")
 ):
     # La fonction retourne maintenant un dictionnaire (password, ai_score, ai_feedback, etc.)
     result = generate_secure_password(mode=mode)

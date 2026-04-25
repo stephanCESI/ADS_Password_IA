@@ -171,16 +171,57 @@
 </ul>
             </div>
 
-        <div id="content-biblio" class="doc-content hidden">
-            <h1>📚 7. Bibliographie & Normes</h1>
+<div id="content-biblio" class="doc-content hidden">
+    <h1>📚 7. Références & Documentation</h1>
 
-<ul>
-    <li><strong>ANSSI (Agence Nationale de la Sécurité des Systèmes d'Information) :</strong> <em>Recommandations relatives à l'authentification par mot de passe</em> (2021). Orientations sur l'abandon des règles de complexité obligatoires au profit de la longueur et de la vérification de compromission.</li>
-    <li><strong>NIST SP 800-63B :</strong> <em>Digital Identity Guidelines - Authentication and Lifecycle Management</em>. Établissement des standards internationaux pour l'évaluation de l'entropie et la génération aléatoire (CSPRNG).</li>
-    <li><strong>SecLists (Daniel Miessler) & Weakpass :</strong> Fournisseurs open-source des jeux de données réels exploités pour le *Reservoir Sampling* (Fuites de bases de données, Top millions).</li>
-    <li><strong>Bibliothèques Techniques :</strong> <em>TensorFlow/Keras</em> (Implémentation Deep Learning), <em>Scikit-Learn</em> (Algorithmes ensemblistes et Régression Logistique).</li>
-</ul>
-            </div>
+    <section>
+        <h2>7.1 État de l'Art Académique et Normalisation</h2>
+        <p><em>Ces sources définissent les frontières technologiques actuelles et les exigences de conformité réglementaire.</em></p>
+
+        <h3>🔬 Littérature Scientifique (Peer-reviewed)</h3>
+        <ul>
+            <li><strong>MDPI Applied Sciences :</strong> <em>Structural Analysis and Machine Learning for Password Security</em> (2022). Étude sur les biais de répétition et l'analyse structurelle des mots de passe.</li>
+            <li><strong>IJCA :</strong> <em>Analysis of Password Strength Meters using Artificial Intelligence</em>. Comparaison des méthodologies d'évaluation de la robustesse via l'IA.</li>
+            <li><strong>ArXiv (Cornell University) :</strong>
+                <ul>
+                    <li><em>Deep Learning for Password Guessing and Security Analysis</em> (2020).</li>
+                    <li><em>Advanced Neural Architectures for Password Strength Estimation</em> (2024).</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h3>📜 Normes Institutionnelles</h3>
+        <ul>
+            <li><strong>ANSSI (France) :</strong> <em>Recommandations relatives à l'authentification par mot de passe</em> (2021). Cadre de référence pour les systèmes d'information critiques.</li>
+            <li><strong>NIST (USA) :</strong> <em>Special Publication 800-63B - Digital Identity Guidelines</em>. Standards sur l'entropie et la gestion des secrets cryptographiques.</li>
+        </ul>
+    </section>
+
+    <hr>
+
+    <section>
+        <h2>7.2 Inspirations, Genèse et Outillage du Projet</h2>
+        <p><em>Ressources techniques et documentaires ayant servi à la définition du sujet et à la conception du POC.</em></p>
+
+        <h3>🎥 Veille Technologique & Ressources Multimédia</h3>
+        <ul>
+            <li><strong>Conférences Sécurité :</strong> Analyses techniques sur l'entropie réelle et les méthodes de craquage par dictionnaire intelligent (Inspirations YouTube/Talks).</li>
+            <li><strong>Computerphile / Technical Insights :</strong> Études sur les mécanismes de hachage et la complexité algorithmique.</li>
+        </ul>
+
+        <h3>🛠️ Frameworks & Data Sources</h3>
+        <ul>
+            <li><strong>SecLists (Daniel Miessler) & Weakpass :</strong> Sources des jeux de données réels (RockYou, Top Millions) pour l'entraînement des modèles.</li>
+            <li><strong>Bibliothèques Open Source :</strong>
+                <ul>
+                    <li><em>TensorFlow/Keras :</em> Moteur d'apprentissage profond pour les architectures CNN et LSTM.</li>
+                    <li><em>Scikit-Learn :</em> Framework de Machine Learning pour les modèles ensemblistes (RF, XGBoost).</li>
+                    <li><em>FastAPI :</em> Infrastructure de serving pour le déploiement de l'API d'inférence.</li>
+                </ul>
+            </li>
+        </ul>
+    </section>
+</div>
     </div>
 </div>
 
@@ -233,17 +274,17 @@
 
             <!-- Zone d'affichage du mot de passe -->
             <div class="generator-display-box mb-4">
-                <span id="gen-password-display">Cliquez sur Générer...</span>
+                <span id="gen-password-display">Cliquez sur l'option préférée...</span>
                 <button id="copy-btn" class="copy-icon" title="Copier"><i class="fa-regular fa-copy"></i></button>
             </div>
 
             <div class="d-flex gap-3 mb-4">
-                <button id="btn-gen-apple" class="btn-action btn-gen" style="font-size: 0.9rem;">
-                    <i class="fa-brands fa-apple"></i> SITE WEB (Apple)
+                <button id="btn-gen-chunked" class="btn-action btn-gen" style="font-size: 0.9rem;">
+                    <i class="fa-brands"></i> Chunked Password
                 </button>
 
                 <button id="btn-gen-diceware" class="btn-action btn-gen" style="font-size: 0.9rem;">
-                    <i class="fa-solid fa-dice"></i> MASTER (Diceware)
+                    <i class="fa-solid"></i> Diceware
                 </button>
 
                 <button id="btn-analyze-gen" class="btn-action btn-analyze hidden" style="font-size: 0.9rem;">

@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Générateur
     // Générateur
-    const btnGenApple = document.getElementById('btn-gen-apple');
+    const btnGenChunked = document.getElementById('btn-gen-chunked');
     const btnGenDiceware = document.getElementById('btn-gen-diceware');
     const btnAnalyzeGen = document.getElementById('btn-analyze-gen');
     const displayGen = document.getElementById('gen-password-display');
@@ -362,9 +362,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    if (btnGenApple && btnGenDiceware) {
+    if (btnGenChunked && btnGenDiceware) {
         // Attachement des événements avec le mode correspondant
-        btnGenApple.addEventListener('click', () => handleGenerate('apple'));
+        btnGenChunked.addEventListener('click', () => handleGenerate('apple'));
         btnGenDiceware.addEventListener('click', () => handleGenerate('diceware'));
 
         btnAnalyzeGen.addEventListener('click', runGenAnalysis);

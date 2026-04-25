@@ -326,7 +326,7 @@ def generate_diceware_password(num_words=6, separator="-"):
     return separator.join(sys_random.choice(word_list) for _ in range(num_words))
 
 
-def generate_secure_password(mode="apple"):
+def generate_secure_password(mode="chunked_password"):
     """
     Fonction principale appelée par l'API FastAPI.
     mode : "apple" (pour les sites) ou "diceware" (pour le master password)
