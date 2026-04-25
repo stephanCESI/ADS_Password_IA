@@ -83,6 +83,9 @@ uvicorn backend.app.main:app --reload
 
 L'interface est accessible sur : http://127.0.0.1:8000
 
+### Ou sinon :
+* Lancer le fichier .bat
+
 ## 📁 Structure du Projet
 
 ```text
