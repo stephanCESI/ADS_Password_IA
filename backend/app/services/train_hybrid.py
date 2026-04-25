@@ -188,7 +188,8 @@ def train_hybrid():
     meta_model.fit(X_s_train, y_s_train)
 
     # 6. Évaluation
-    final_acc = accuracy_score(y_s_test, meta_model.predict(X_s_test))
+    y_pred_hybrid = meta_model.predict(X_s_test)
+    final_acc = accuracy_score(y_s_test, y_pred_hybrid)
     print(f"\n🏆 PERFORMANCE HYBRIDE : {final_acc:.4f}")
 
     print("   Poids accordés aux experts :")
@@ -196,10 +197,27 @@ def train_hybrid():
     for name, coef in sorted(weights, key=lambda x: x[1], reverse=True):
         print(f"   - {name.upper()}: {coef:.2f}")
 
-    # 7. Sauvegarde
+    # 7. Sauvegarde du modèle
     joblib.dump(meta_model, MODEL_DIR / "hybrid_meta.pkl")
-    print(f"\n💾 Sauvegardé : {MODEL_DIR / 'hybrid_meta.pkl'}")
+    print(f"\n💾 Modèle Sauvegardé : {MODEL_DIR / 'hybrid_meta.pkl'}")
 
+    # ---------------------------------------------------------
+    # 8. EXPORT POUR LE JUPYTER NOTEBOOK (Matrices de confusion)
+    # ---------------------------------------------------------
+    print("💾 Exportation des prédictions pour l'analyse Jupyter...")
+
+    # On arrondit les probabilités du RF pour avoir des classes 0 ou 1
+    y_pred_rf = X_s_test['rf'].round().astype(int)
+
+    df_results = pd.DataFrame({
+        'y_true': y_s_test,
+        'y_pred_rf': y_pred_rf,
+        'y_pred_hybrid': y_pred_hybrid
+    })
+
+    results_path = PROCESSED_DIR / "test_results_hybrid.csv"
+    df_results.to_csv(results_path, index=False)
+    print(f"✅ Fichier d'analyse généré : {results_path.name}")
 
 if __name__ == "__main__":
     train_hybrid()
